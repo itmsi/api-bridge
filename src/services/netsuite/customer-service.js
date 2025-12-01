@@ -1,5 +1,6 @@
 const { getNetSuiteClient } = require('./client');
 const { logger } = require('../../utils/logger');
+const { getScriptConfig } = require('../../config/netsuite');
 
 /**
  * NetSuite Customer Service
@@ -18,9 +19,13 @@ class NetSuiteCustomerService {
     try {
       logger().info(`Fetching customer from NetSuite: ${customerId}`);
 
+      // Get script config from database
+      const scriptConfig = await getScriptConfig('customer', 'read');
       const response = await this.client.get({
         customerId,
         operation: 'read',
+        script: scriptConfig.script_id,
+        deploy: scriptConfig.deployment_id,
       });
 
       if (response.success && response.data) {
@@ -37,24 +42,43 @@ class NetSuiteCustomerService {
   /**
    * Get customers dengan pagination
    * Sesuai dengan "Get Customer Page" dari Postman collection
+   * Format baru: { pageSize, pageIndex, lastmodified }
    */
   async getCustomersPage(params = {}) {
     try {
-      const { page = 1, pageSize = 500, since = null, netsuite_id = null } = params;
+      // Support both old format (page, since) and new format (pageIndex, lastmodified)
+      const { 
+        page = null, 
+        pageIndex = null, 
+        pageSize = 500, 
+        since = null, 
+        lastmodified = null,
+        netsuite_id = null 
+      } = params;
 
-      logger().info('Fetching customers page from NetSuite', { page, pageSize, since, netsuite_id });
+      // Convert old format to new format
+      const finalPageIndex = pageIndex !== null ? pageIndex : (page !== null ? page - 1 : 0);
+      const finalLastModified = lastmodified || since;
 
-      // Build request body sesuai dengan format NetSuite
+      logger().info('Fetching customers page from NetSuite', { 
+        pageIndex: finalPageIndex, 
+        pageSize, 
+        lastmodified: finalLastModified, 
+        netsuite_id 
+      });
+
+      // Build request body sesuai dengan format NetSuite baru
       const requestBody = {
-        operation: 'search',
-        page,
         pageSize,
-        ...(since && { lastModifiedDate: since }),
-        ...(netsuite_id && { netsuite_id }),
+        pageIndex: finalPageIndex,
+        ...(finalLastModified && { lastmodified: finalLastModified }),
       };
 
+      // Get script config from database
+      const scriptConfig = await getScriptConfig('customer', 'getPage');
       const response = await this.client.post(requestBody, {
-        operation: 'getPage',
+        script: scriptConfig.script_id,
+        deploy: scriptConfig.deployment_id,
       });
 
       if (response.success && response.data) {
@@ -65,6 +89,10 @@ class NetSuiteCustomerService {
         items: [],
         hasMore: false,
         totalResults: 0,
+        pageIndex: finalPageIndex,
+        pageSize,
+        totalRows: 0,
+        totalPages: 0,
       };
     } catch (error) {
       logger().error('Error fetching customers page from NetSuite:', error);
@@ -82,8 +110,12 @@ class NetSuiteCustomerService {
 
       const requestBody = this.transformCustomerToNetSuiteFormat(customerData, 'create');
 
+      // Get script config from database
+      const scriptConfig = await getScriptConfig('customer', 'create');
       const response = await this.client.post(requestBody, {
         operation: 'create',
+        script: scriptConfig.script_id,
+        deploy: scriptConfig.deployment_id,
       });
 
       if (response.success && response.data) {
@@ -107,8 +139,12 @@ class NetSuiteCustomerService {
 
       const requestBody = this.transformCustomerToNetSuiteFormat(customerData, 'update', internalId);
 
+      // Get script config from database
+      const scriptConfig = await getScriptConfig('customer', 'update');
       const response = await this.client.post(requestBody, {
         operation: 'update',
+        script: scriptConfig.script_id,
+        deploy: scriptConfig.deployment_id,
       });
 
       if (response.success && response.data) {
@@ -125,17 +161,25 @@ class NetSuiteCustomerService {
   /**
    * Search customers dengan filter
    * Untuk incremental sync dengan lastModifiedDate filter
+   * Support both old format (page, since) and new format (pageIndex, lastmodified)
    */
   async searchCustomers(params = {}) {
     try {
       const {
         since = null,
-        page = 1,
+        lastmodified = null,
+        page = null,
+        pageIndex = null,
         pageSize = 500,
         netsuite_id = null,
       } = params;
 
-      logger().info('Searching customers in NetSuite', { since, page, pageSize, netsuite_id });
+      logger().info('Searching customers in NetSuite', { 
+        lastmodified: lastmodified || since, 
+        pageIndex: pageIndex !== null ? pageIndex : (page !== null ? page - 1 : 0), 
+        pageSize, 
+        netsuite_id 
+      });
 
       // Jika hanya satu customer yang dicari
       if (netsuite_id) {
@@ -145,17 +189,32 @@ class NetSuiteCustomerService {
             items: [customer],
             hasMore: false,
             totalResults: 1,
+            pageIndex: 0,
+            pageSize: 1,
+            totalRows: 1,
+            totalPages: 1,
           };
         }
         return {
           items: [],
           hasMore: false,
           totalResults: 0,
+          pageIndex: 0,
+          pageSize: 0,
+          totalRows: 0,
+          totalPages: 0,
         };
       }
 
-      // Get customers dengan pagination
-      return await this.getCustomersPage({ since, page, pageSize });
+      // Get customers dengan pagination - convert old format to new
+      const finalPageIndex = pageIndex !== null ? pageIndex : (page !== null ? page - 1 : 0);
+      const finalLastModified = lastmodified || since;
+
+      return await this.getCustomersPage({ 
+        pageIndex: finalPageIndex, 
+        pageSize, 
+        lastmodified: finalLastModified 
+      });
     } catch (error) {
       logger().error('Error searching customers in NetSuite:', error);
       throw error;
@@ -163,25 +222,107 @@ class NetSuiteCustomerService {
   }
 
   /**
+   * Parse date dari format NetSuite "DD/MM/YYYY HH:MM AM/PM" atau "DD/MM/YYYY" ke ISO format
+   */
+  parseNetSuiteDate(dateString) {
+    if (!dateString) return null;
+
+    try {
+      // Format dengan waktu: "21/11/2025 11:28 AM" atau "21/11/2025 3:07 PM"
+      const dateTimePattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s+(AM|PM)$/i;
+      const dateTimeMatch = dateString.match(dateTimePattern);
+
+      if (dateTimeMatch) {
+        const [, day, month, year, hour, minute, ampm] = dateTimeMatch;
+        let hour24 = parseInt(hour, 10);
+        
+        if (ampm.toUpperCase() === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (ampm.toUpperCase() === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+
+        const date = new Date(
+          parseInt(year, 10),
+          parseInt(month, 10) - 1,
+          parseInt(day, 10),
+          hour24,
+          parseInt(minute, 10)
+        );
+
+        return date.toISOString();
+      }
+
+      // Format tanpa waktu: "21/11/2025"
+      const dateOnlyPattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+      const dateOnlyMatch = dateString.match(dateOnlyPattern);
+
+      if (dateOnlyMatch) {
+        const [, day, month, year] = dateOnlyMatch;
+        const date = new Date(
+          parseInt(year, 10),
+          parseInt(month, 10) - 1,
+          parseInt(day, 10)
+        );
+
+        return date.toISOString();
+      }
+
+      // Fallback: try to parse as ISO date
+      const parsed = new Date(dateString);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString();
+      }
+
+      return null;
+    } catch (error) {
+      logger().warn(`Failed to parse date: ${dateString}`, error);
+      return null;
+    }
+  }
+
+  /**
    * Transform customer data dari NetSuite ke format internal
+   * Support format baru: { internalId, entityId, companyName, email, phone, lastModifiedDate }
    */
   transformCustomerData(nsData) {
     if (!nsData) return null;
 
-    // Extract data sesuai dengan struktur response NetSuite
-    // Sesuaikan dengan struktur actual response dari NetSuite API
+    // Extract data sesuai dengan struktur response NetSuite baru
+    // Format baru: internalId, entityId, companyName, email, phone, lastModifiedDate
+    const internalId = nsData.internalId?.toString() || nsData.internalid?.toString() || nsData.id?.toString() || null;
+    const companyName = nsData.companyName || nsData.companyname || '';
+    const entityId = nsData.entityId || nsData.entityid || '';
+    const name = companyName || entityId || '';
+    
+    // Parse lastModifiedDate dari format "21/11/2025 11:28 AM"
+    let lastModified = null;
+    if (nsData.lastModifiedDate) {
+      lastModified = this.parseNetSuiteDate(nsData.lastModifiedDate);
+    } else if (nsData.lastmodifieddate) {
+      lastModified = this.parseNetSuiteDate(nsData.lastmodifieddate);
+    } else if (nsData.lastModifiedDate) {
+      lastModified = this.parseNetSuiteDate(nsData.lastModifiedDate);
+    }
+
+    // Fallback ke current date jika tidak ada
+    if (!lastModified) {
+      lastModified = new Date().toISOString();
+    }
+
     return {
-      netsuite_id: nsData.internalid?.toString() || nsData.id?.toString() || null,
-      name: nsData.companyname || nsData.entityid || '',
+      netsuite_id: internalId,
+      name: name,
       email: nsData.email || '',
       phone: nsData.phone || '',
       data: nsData, // Raw data untuk storage
-      last_modified_netsuite: nsData.lastmodifieddate || nsData.lastModifiedDate || new Date().toISOString(),
+      last_modified_netsuite: lastModified,
     };
   }
 
   /**
    * Transform customer list response dari NetSuite
+   * Format baru: { success, pageIndex, pageSize, totalRows, totalPages, data: [...] }
    */
   transformCustomerListResponse(nsResponse) {
     if (!nsResponse) {
@@ -189,25 +330,43 @@ class NetSuiteCustomerService {
         items: [],
         hasMore: false,
         totalResults: 0,
+        pageIndex: 0,
+        pageSize: 0,
+        totalRows: 0,
+        totalPages: 0,
       };
     }
 
     // Extract items array dari response
+    // Format baru: response.data adalah array
     let items = [];
-    if (Array.isArray(nsResponse.items)) {
-      items = nsResponse.items;
-    } else if (Array.isArray(nsResponse.data)) {
+    if (Array.isArray(nsResponse.data)) {
       items = nsResponse.data;
+    } else if (Array.isArray(nsResponse.items)) {
+      items = nsResponse.items;
     } else if (Array.isArray(nsResponse)) {
       items = nsResponse;
     }
 
     const transformedItems = items.map((item) => this.transformCustomerData(item)).filter(Boolean);
 
+    // Extract pagination info dari format baru
+    const pageIndex = nsResponse.pageIndex !== undefined ? nsResponse.pageIndex : 0;
+    const pageSize = nsResponse.pageSize || transformedItems.length || 0;
+    const totalRows = nsResponse.totalRows || transformedItems.length || 0;
+    const totalPages = nsResponse.totalPages || (totalRows > 0 ? Math.ceil(totalRows / pageSize) : 0);
+
+    // Calculate hasMore based on pagination
+    const hasMore = pageIndex + 1 < totalPages;
+
     return {
       items: transformedItems,
-      hasMore: nsResponse.hasMore === true || nsResponse.has_more === true || false,
-      totalResults: nsResponse.totalResults || nsResponse.total_results || transformedItems.length,
+      hasMore: hasMore,
+      totalResults: totalRows,
+      pageIndex: pageIndex,
+      pageSize: pageSize,
+      totalRows: totalRows,
+      totalPages: totalPages,
     };
   }
 

@@ -532,6 +532,38 @@ Sistem menggunakan OAuth 1.0 untuk autentikasi dengan NetSuite RESTlet API. Liha
    NETSUITE_REALM=your_realm
    ```
 
+### NetSuite Script Configuration
+
+Sistem mendukung konfigurasi script ID NetSuite per module dan operation melalui database. Ini memungkinkan setiap module memiliki script ID yang berbeda untuk operasi yang berbeda.
+
+**📚 Dokumentasi Lengkap**: [NetSuite Scripts Configuration Guide](./src/modules/netsuite_scripts/README.md)
+
+**Fitur:**
+- ✅ Script ID disimpan di database (bukan di `.env`)
+- ✅ Setiap module/operation bisa punya script ID berbeda
+- ✅ Mudah diubah tanpa restart aplikasi (dengan cache 5 menit)
+- ✅ Fallback ke default dari `.env` jika tidak ada di database
+- ✅ API endpoints untuk manage script configurations
+
+**Quick Start:**
+```bash
+# 1. Jalankan migration
+npm run migrate
+
+# 2. Tambahkan script config via API
+POST /api/admin/netsuite-scripts
+{
+  "module": "customer",
+  "operation": "getPage",
+  "script_id": "532",
+  "deployment_id": "1"
+}
+
+# 3. Gunakan di service
+const { getScriptConfig } = require('./config/netsuite');
+const scriptConfig = await getScriptConfig('customer', 'getPage');
+```
+
 ### Sync Strategy
 
 Sistem menggunakan **incremental sync** dengan strategi berikut:
@@ -850,6 +882,7 @@ POST /api/admin/sync/failed-jobs/:jobId/retry
 
 - [API Bridge Implementation](./API_BRIDGE_IMPLEMENTATION.md) - Detailed implementation guide
 - [NetSuite Integration](./NETSUITE_INTEGRATION.md) - NetSuite integration guide
+- [NetSuite Scripts Configuration](./src/modules/netsuite_scripts/README.md) - Cara mengelola script ID NetSuite per module
 - [Quick Start Guide](./QUICKSTART.md) - Quick start tutorial
 - [Contributing Guide](./CONTRIBUTING.md) - Contribution guidelines
 

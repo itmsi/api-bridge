@@ -1,5 +1,5 @@
 const info = {
-  description: 'API Bridge - Sistem integrasi dengan Oracle NetSuite untuk sinkronisasi data customer dengan fitur on-demand sync, caching, dan background workers',
+  description: 'API Bridge - Sistem integrasi dengan Oracle NetSuite untuk sinkronisasi data customer dengan fitur on-demand incremental sync (Last Updated Sync), caching, dan background workers. Sistem secara otomatis melakukan incremental sync dengan cara: 1) Hit ke API NetSuite untuk cek lastupdate all data, 2) Cek data lastupdate yang ada di DB internal, 3) Sync data yang lebih besar dari lastupdate-nya jika diperlukan.',
   version: '1.0.0',
   title: 'API Bridge Documentation',
   contact: {
@@ -27,11 +27,13 @@ const commonSchema = require('./schema/common');
 const customerSchema = require('./schema/customer');
 const syncSchema = require('./schema/sync');
 const apiClientSchema = require('./schema/api_client');
+const netsuiteScriptsSchema = require('./schema/netsuite_scripts');
 
 // Import paths
 const customerPaths = require('./path/customer');
 const syncPaths = require('./path/sync');
 const apiClientPaths = require('./path/api_client');
+const netsuiteScriptsPaths = require('./path/netsuite_scripts');
 
 // Combine all schemas
 const schemas = {
@@ -39,6 +41,7 @@ const schemas = {
   ...customerSchema,
   ...syncSchema,
   ...apiClientSchema,
+  ...netsuiteScriptsSchema,
 };
 
 // Combine all paths
@@ -47,6 +50,7 @@ const paths = {
   ...customerPaths,
   ...syncPaths,
   ...apiClientPaths,
+  ...netsuiteScriptsPaths,
 };
 
 const index = {

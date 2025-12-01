@@ -3,73 +3,51 @@
  */
 
 const customerPaths = {
-  '/customers': {
-    get: {
+  '/customers/get': {
+    post: {
       tags: ['Customers'],
       summary: 'Get all customers',
       security: [{ ApiKeyAuth: [], ApiSecretAuth: [] }],
-      description: 'Retrieve all customers with pagination, filtering, and on-demand sync. Returns cached data if available, triggers sync if stale.',
-      parameters: [
-        {
-          name: 'page',
-          in: 'query',
-          description: 'Page number',
-          required: false,
-          schema: {
-            type: 'integer',
-            default: 1,
-            minimum: 1
-          }
-        },
-        {
-          name: 'limit',
-          in: 'query',
-          description: 'Items per page',
-          required: false,
-          schema: {
-            type: 'integer',
-            default: 10,
-            minimum: 1,
-            maximum: 100
-          }
-        },
-        {
-          name: 'email',
-          in: 'query',
-          description: 'Filter by email (partial match)',
-          required: false,
-          schema: {
-            type: 'string'
-          }
-        },
-        {
-          name: 'name',
-          in: 'query',
-          description: 'Filter by name (partial match)',
-          required: false,
-          schema: {
-            type: 'string'
-          }
-        },
-        {
-          name: 'netsuite_id',
-          in: 'query',
-          description: 'Filter by NetSuite ID',
-          required: false,
-          schema: {
-            type: 'string'
+      description: 'Retrieve all customers with pagination, filtering, and on-demand incremental sync. Sistem akan secara otomatis: 1) Hit ke API NetSuite untuk cek lastupdate all data, 2) Cek data lastupdate yang ada di DB internal, 3) Sync data yang lebih besar dari lastupdate-nya jika diperlukan. Returns cached data if available, triggers incremental sync if data is stale or newer data exists in NetSuite.',
+      requestBody: {
+        required: false,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/CustomerGetRequest' },
+            example: {
+              page: 1,
+              limit: 10,
+              email: null,
+              name: null,
+              netsuite_id: null
+            }
           }
         }
-      ],
+      },
       responses: {
         200: {
-          description: 'Success',
+          description: 'Success - Returns customer list. May trigger incremental sync in background if data is stale or newer data exists in NetSuite.',
           headers: {
             'X-Sync-Triggered': {
-              description: 'Indicates if a sync job was triggered',
+              description: 'Indicates if an incremental sync job was triggered',
               schema: {
                 type: 'string',
                 example: 'true'
+              }
+            },
+            'X-Job-Id': {
+              description: 'Sync job ID if incremental sync was triggered',
+              schema: {
+                type: 'string',
+                format: 'uuid',
+                example: '123e4567-e89b-12d3-a456-426614174000'
+              }
+            },
+            'X-Sync-Reason': {
+              description: 'Reason why sync was triggered (e.g., "Data is stale", "NetSuite has newer data")',
+              schema: {
+                type: 'string',
+                example: 'NetSuite has newer data (NetSuite: 2025-12-01T10:00:00.000Z, DB: 2025-11-30T10:00:00.000Z)'
               }
             }
           },
@@ -88,7 +66,9 @@ const customerPaths = {
           }
         }
       }
-    },
+    }
+  },
+  '/customers/create': {
     post: {
       tags: ['Customers'],
       summary: 'Create customer',
@@ -210,7 +190,7 @@ const customerPaths = {
       tags: ['Customers'],
       summary: 'Get customer by NetSuite ID',
       security: [{ ApiKeyAuth: [], ApiSecretAuth: [] }],
-      description: 'Retrieve customer by NetSuite ID with on-demand sync. Triggers sync job if customer not found or data is stale.',
+      description: 'Retrieve customer by NetSuite ID with on-demand incremental sync. Sistem akan cek lastupdate dari NetSuite dan DB internal, lalu trigger sync jika data lebih baru di NetSuite atau data stale. Triggers sync job if customer not found or data is stale.',
       parameters: [
         {
           name: 'netsuite_id',
@@ -234,11 +214,18 @@ const customerPaths = {
               }
             },
             'X-Job-Id': {
-              description: 'Sync job ID if triggered',
+              description: 'Sync job ID if incremental sync was triggered',
               schema: {
                 type: 'string',
                 format: 'uuid',
                 example: '123e4567-e89b-12d3-a456-426614174000'
+              }
+            },
+            'X-Sync-Reason': {
+              description: 'Reason why sync was triggered',
+              schema: {
+                type: 'string',
+                example: 'Data is stale (12.5 hours since last sync)'
               }
             }
           },
@@ -452,9 +439,9 @@ const customerPaths = {
           'application/json': {
             schema: { $ref: '#/components/schemas/CustomerSearchRequest' },
             example: {
-              page: 1,
-              pageSize: 500,
-              since: '2025-01-01T00:00:00.000Z',
+              pageIndex: 0,
+              pageSize: 50,
+              lastmodified: '21/11/2025',
               netsuite_id: null
             }
           }
@@ -482,7 +469,23 @@ const customerPaths = {
                       },
                       totalResults: {
                         type: 'integer',
-                        example: 10
+                        example: 4
+                      },
+                      pageIndex: {
+                        type: 'integer',
+                        example: 0
+                      },
+                      pageSize: {
+                        type: 'integer',
+                        example: 50
+                      },
+                      totalRows: {
+                        type: 'integer',
+                        example: 4
+                      },
+                      totalPages: {
+                        type: 'integer',
+                        example: 1
                       }
                     }
                   }

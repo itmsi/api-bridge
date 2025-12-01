@@ -5,11 +5,11 @@ const { verifyApiKey } = require('../../middlewares');
 // const { verifyToken } = require('../../middlewares');
 
 /**
- * @route   GET /api/customers
+ * @route   POST /api/customers/get
  * @desc    Get all customers with pagination dan filtering
  * @access  Protected (API Key required)
  */
-router.get('/', verifyApiKey, handler.getAll);
+router.post('/get', verifyApiKey, handler.getAll);
 
 /**
  * @route   GET /api/customers/:id
@@ -33,11 +33,11 @@ router.get('/netsuite/:netsuite_id', verifyApiKey, handler.getByNetSuiteId);
 router.get('/netsuite/read', verifyApiKey, handler.readFromNetSuite);
 
 /**
- * @route   POST /api/customers
+ * @route   POST /api/customers/create
  * @desc    Create new customer di NetSuite dan sync ke database lokal
  * @access  Protected (API Key required)
  */
-router.post('/', verifyApiKey, handler.create);
+router.post('/create', verifyApiKey, handler.create);
 
 /**
  * @route   POST /api/customers/update

@@ -5,6 +5,7 @@ const { getCache, setCache, deleteCache, generateCacheKey, CACHE_KEYS, CACHE_TTL
 const { publishSyncJob } = require('../../utils/rabbitmq-sync');
 const { Logger } = require('../../utils/logger');
 const { getNetSuiteCustomerService } = require('../../services/netsuite/customer-service');
+const { checkAndTriggerIncrementalSync } = require('../../utils/incremental-sync');
 
 /**
  * Get all customers dengan pagination dan filtering
@@ -12,7 +13,7 @@ const { getNetSuiteCustomerService } = require('../../services/netsuite/customer
  */
 const getAll = async (req, res) => {
   try {
-    const { page = 1, limit = 10, email, name, netsuite_id } = req.query;
+    const { page = 1, limit = 10, email, name, netsuite_id } = req.body;
     
     // Build filters
     const filters = {};
@@ -49,41 +50,30 @@ const getAll = async (req, res) => {
     // Set cache
     await setCache(cacheKey, data, CACHE_TTL.CUSTOMER_LIST);
 
-    // Check if data is stale dan trigger sync jika diperlukan
-    const syncTracker = await syncRepository.getSyncTracker('customer');
-    const maxStalenessHours = 12; // Consider data stale after 12 hours
-    const shouldSync = !syncTracker || 
-      !syncTracker.last_sync_at ||
-      (new Date() - new Date(syncTracker.last_sync_at)) > (maxStalenessHours * 60 * 60 * 1000);
-
-    if (shouldSync && data && data.pagination && data.pagination.total > 0) {
-      // Trigger incremental sync in background
-      const lastSync = syncTracker?.last_sync_at || syncTracker?.last_synced_batch_max;
-      
+    // Check if data is stale dan trigger sync jika diperlukan menggunakan fungsi reusable
+    // Hanya check jika ada data di DB
+    if (data && data.pagination && data.pagination.total > 0) {
       try {
-        const { jobId } = await publishSyncJob('customer', 'incremental_sync', {
-          since: lastSync,
-          page: 1,
+        const netSuiteService = getNetSuiteCustomerService();
+        const syncResult = await checkAndTriggerIncrementalSync({
+          module: 'customer',
+          netSuiteService: netSuiteService,
+          repository: repository,
+          syncRepository: syncRepository,
+          maxStalenessHours: 12,
           pageSize: 500,
         });
 
-        // Create job record
-        await syncRepository.createSyncJob({
-          job_id: jobId,
-          module: 'customer',
-          params: { since: lastSync, page: 1, pageSize: 500 },
-          status: 'pending',
-          attempts: 0,
-        });
-
-        Logger.info(`Triggered incremental sync job: ${jobId}`);
+        if (syncResult.syncTriggered) {
+          // Return response with sync header
+          res.setHeader('X-Sync-Triggered', 'true');
+          res.setHeader('X-Job-Id', syncResult.jobId);
+          res.setHeader('X-Sync-Reason', syncResult.reason);
+        }
       } catch (syncError) {
-        Logger.error('Error triggering sync:', syncError);
+        Logger.error('Error checking/triggering incremental sync:', syncError);
         // Continue without failing the request
       }
-
-      // Return response with sync header
-      res.setHeader('X-Sync-Triggered', 'true');
     }
 
     return baseResponse(res, { 
@@ -332,24 +322,42 @@ const readFromNetSuite = async (req, res) => {
 
 /**
  * Search customers dari NetSuite dengan POST (Get Customer Page)
+ * Format baru: { pageSize, pageIndex, lastmodified }
  */
 const searchFromNetSuite = async (req, res) => {
   try {
-    const { page = 1, pageSize = 500, since = null, netsuite_id = null } = req.body;
+    // Support both old format (page, since) and new format (pageIndex, lastmodified)
+    const { 
+      page = null, 
+      pageIndex = null, 
+      pageSize = 50, 
+      since = null, 
+      lastmodified = null,
+      netsuite_id = null 
+    } = req.body;
 
-    Logger.info('Searching customers from NetSuite', { page, pageSize, since, netsuite_id });
+    // Convert old format to new format
+    const finalPageIndex = pageIndex !== null ? pageIndex : (page !== null ? page - 1 : 0);
+    const finalLastModified = lastmodified || since;
+
+    Logger.info('Searching customers from NetSuite', { 
+      pageIndex: finalPageIndex, 
+      pageSize, 
+      lastmodified: finalLastModified, 
+      netsuite_id 
+    });
 
     const netSuiteService = getNetSuiteCustomerService();
     const response = await netSuiteService.getCustomersPage({
-      page,
+      pageIndex: finalPageIndex,
       pageSize,
-      since,
+      lastmodified: finalLastModified,
       netsuite_id,
     });
 
     // Check if response is empty
     if (!response || (response.items && Array.isArray(response.items) && response.items.length === 0)) {
-      return emptyDataResponse(res, page, pageSize || 0, true);
+      return emptyDataResponse(res, finalPageIndex + 1, pageSize || 0, true);
     }
 
     return baseResponse(res, response);

@@ -32,8 +32,17 @@ class NetSuiteClient {
     }
 
     try {
-      // Build URL dengan query parameters
-      const url = new URL(this.restletUrl);
+      // Build URL - support custom script and deploy
+      let baseUrl = this.restletUrl;
+      if (params.script && params.deploy) {
+        // Build custom URL dengan script dan deploy yang berbeda
+        baseUrl = `${this.baseUrl}/app/site/hosting/restlet.nl?script=${params.script}&deploy=${params.deploy}`;
+        // Remove script and deploy from params untuk tidak duplikat di query string
+        const { script, deploy, ...otherParams } = params;
+        params = otherParams;
+      }
+
+      const url = new URL(baseUrl);
       if (params && Object.keys(params).length > 0) {
         Object.keys(params).forEach((key) => {
           url.searchParams.append(key, params[key]);

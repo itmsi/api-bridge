@@ -240,7 +240,7 @@ const customerSchemas = {
       }
     }
   },
-  CustomerSearchRequest: {
+  CustomerGetRequest: {
     type: 'object',
     properties: {
       page: {
@@ -250,19 +250,70 @@ const customerSchemas = {
         minimum: 1,
         example: 1
       },
+      limit: {
+        type: 'integer',
+        description: 'Items per page',
+        default: 10,
+        minimum: 1,
+        maximum: 100,
+        example: 10
+      },
+      email: {
+        type: 'string',
+        nullable: true,
+        description: 'Filter by email (partial match)',
+        example: 'abc@example.com'
+      },
+      name: {
+        type: 'string',
+        nullable: true,
+        description: 'Filter by name (partial match)',
+        example: 'PT ABC'
+      },
+      netsuite_id: {
+        type: 'string',
+        nullable: true,
+        description: 'Filter by NetSuite ID',
+        example: '123'
+      }
+    }
+  },
+  CustomerSearchRequest: {
+    type: 'object',
+    properties: {
+      pageIndex: {
+        type: 'integer',
+        description: 'Page index (0-based)',
+        default: 0,
+        minimum: 0,
+        example: 0
+      },
       pageSize: {
         type: 'integer',
         description: 'Items per page',
-        default: 500,
+        default: 50,
         minimum: 1,
         maximum: 1000,
-        example: 500
+        example: 50
+      },
+      lastmodified: {
+        type: 'string',
+        nullable: true,
+        description: 'Filter by last modified date (format: DD/MM/YYYY)',
+        example: '21/11/2025'
+      },
+      // Legacy support
+      page: {
+        type: 'integer',
+        description: 'Page number (1-based, will be converted to pageIndex)',
+        minimum: 1,
+        example: 1
       },
       since: {
         type: 'string',
         format: 'date-time',
         nullable: true,
-        description: 'Filter by last modified date',
+        description: 'Filter by last modified date (legacy format, will be converted to lastmodified)',
         example: '2025-01-01T00:00:00.000Z'
       },
       netsuite_id: {

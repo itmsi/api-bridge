@@ -1,13 +1,17 @@
 /**
  * NetSuite API Configuration
  * Credentials disimpan di environment variables untuk keamanan
+ * Script ID disimpan di database untuk fleksibilitas per module/operation
  */
+
+const { getCache, setCache } = require('../utils/cache');
+const netsuiteScriptsRepo = require('../modules/netsuite_scripts');
 
 const NETSUITE_CONFIG = {
   // Base URL dari Postman collection
   baseUrl: process.env.NETSUITE_BASE_URL || 'https://11970733-sb1.restlets.api.netsuite.com',
   
-  // Restlet script configuration
+  // Default Restlet script configuration (fallback jika tidak ada di DB)
   scriptId: process.env.NETSUITE_SCRIPT_ID || '472',
   deploymentId: process.env.NETSUITE_DEPLOYMENT_ID || '1',
   
@@ -28,6 +32,9 @@ const NETSUITE_CONFIG = {
   // Enable/Disable NetSuite integration
   enabled: process.env.NETSUITE_ENABLED === 'true',
 };
+
+// Cache TTL untuk script config (5 menit)
+const SCRIPT_CONFIG_CACHE_TTL = 5 * 60; // 5 minutes in seconds
 
 /**
  * Validate NetSuite configuration
@@ -53,15 +60,73 @@ const validateConfig = () => {
 };
 
 /**
- * Get Restlet endpoint URL
+ * Get Restlet endpoint URL (default/legacy)
  */
 const getRestletUrl = () => {
   return `${NETSUITE_CONFIG.baseUrl}/app/site/hosting/restlet.nl?script=${NETSUITE_CONFIG.scriptId}&deploy=${NETSUITE_CONFIG.deploymentId}`;
+};
+
+/**
+ * Get script configuration from database dengan caching
+ * @param {string} module - Module name (e.g., 'customer', 'order')
+ * @param {string} operation - Operation name (e.g., 'read', 'create', 'getPage')
+ * @returns {Promise<{script_id: string, deployment_id: string}|null>}
+ */
+const getScriptConfig = async (module, operation) => {
+  try {
+    // Check cache first
+    const cacheKey = `netsuite:script:${module}:${operation}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Get from database
+    const config = await netsuiteScriptsRepo.getScriptConfig(module, operation);
+    
+    if (config) {
+      const result = {
+        script_id: config.script_id,
+        deployment_id: config.deployment_id,
+      };
+      
+      // Cache the result
+      await setCache(cacheKey, result, SCRIPT_CONFIG_CACHE_TTL);
+      
+      return result;
+    }
+
+    // Fallback to default if not found in DB
+    return {
+      script_id: NETSUITE_CONFIG.scriptId,
+      deployment_id: NETSUITE_CONFIG.deploymentId,
+    };
+  } catch (error) {
+    // If database error, fallback to default
+    console.warn(`Error getting script config from DB for ${module}:${operation}, using default:`, error.message);
+    return {
+      script_id: NETSUITE_CONFIG.scriptId,
+      deployment_id: NETSUITE_CONFIG.deploymentId,
+    };
+  }
+};
+
+/**
+ * Get Restlet endpoint URL dengan script config dari database
+ * @param {string} module - Module name
+ * @param {string} operation - Operation name
+ * @returns {Promise<string>}
+ */
+const getRestletUrlWithConfig = async (module, operation) => {
+  const config = await getScriptConfig(module, operation);
+  return `${NETSUITE_CONFIG.baseUrl}/app/site/hosting/restlet.nl?script=${config.script_id}&deploy=${config.deployment_id}`;
 };
 
 module.exports = {
   NETSUITE_CONFIG,
   validateConfig,
   getRestletUrl,
+  getScriptConfig,
+  getRestletUrlWithConfig,
 };
 

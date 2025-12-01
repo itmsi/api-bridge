@@ -1,9 +1,9 @@
 {
 	"info": {
-		"_postman_id": "58a2eb97-a33b-4239-b308-3e3ae2624d03",
+		"_postman_id": "5eefeb41-0358-464b-bfb1-660464f9a3ee",
 		"name": "MSI Integration (SB)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "5298423"
+		"_exporter_id": "46761469"
 	},
 	"item": [
 		{
@@ -110,7 +110,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"customform\": \"5\",\r\n    \"isperson\": \"F\",\r\n    \"firstname\": \"\",\r\n    \"lastname\": \"\",\r\n    \"companyname\": \"PT ABC\",\r\n    \"subsidiary\": \"1\",\r\n    \"email\": \"abc@test.com\",\r\n    \"phone\": \"62128214884\",\r\n    \"vatregnumber\": \"99.00.000.000\",\r\n    \"autoname\": false,\r\n    \"entityid\": \"CST1200 - PT ABC\",\r\n    \"isinactive\": false,\r\n    \"transactionType\": \"customer\",\r\n    \"address\": [\r\n        {\r\n            \"defaultshipping\": \"TRUE\",\r\n            \"defaultbilling\": \"TRUE\",\r\n            \"country\": \"ID\",\r\n            \"label\": \"PT ABC\",\r\n            \"override_initialvalue\": \"TRUE\",\r\n            \"addrtext\": \"Jl. Kemanggisan No. 10\"\r\n        }\r\n    ]\r\n}",
+					"raw": "{\r\n  \"pageSize\": 50,\r\n  \"pageIndex\": 0,\r\n  \"lastmodified\": \"21/11/2025\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -118,7 +118,7 @@
 					}
 				},
 				"url": {
-					"raw": "https://11970733-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=472&deploy=1",
+					"raw": "https://11970733-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=532&deploy=1",
 					"protocol": "https",
 					"host": [
 						"11970733-sb1",
@@ -136,7 +136,7 @@
 					"query": [
 						{
 							"key": "script",
-							"value": "472"
+							"value": "532"
 						},
 						{
 							"key": "deploy",
