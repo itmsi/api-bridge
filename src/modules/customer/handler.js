@@ -43,37 +43,40 @@ const getAll = async (req, res) => {
     const data = await repository.findAll(filters, page, limit);
 
     // Check if data is empty
-    if (!data || !data.items || (Array.isArray(data.items) && data.items.length === 0)) {
-      return emptyDataResponse(res, page, limit, true);
+    const isEmpty = !data || !data.items || (Array.isArray(data.items) && data.items.length === 0);
+
+    // Set cache jika ada data
+    if (!isEmpty) {
+      await setCache(cacheKey, data, CACHE_TTL.CUSTOMER_LIST);
     }
 
-    // Set cache
-    await setCache(cacheKey, data, CACHE_TTL.CUSTOMER_LIST);
-
     // Check if data is stale dan trigger sync jika diperlukan menggunakan fungsi reusable
-    // Hanya check jika ada data di DB
-    if (data && data.pagination && data.pagination.total > 0) {
-      try {
-        const netSuiteService = getNetSuiteCustomerService();
-        const syncResult = await checkAndTriggerIncrementalSync({
-          module: 'customer',
-          netSuiteService: netSuiteService,
-          repository: repository,
-          syncRepository: syncRepository,
-          maxStalenessHours: 12,
-          pageSize: 500,
-        });
+    // Check ke NetSuite baik jika ada data maupun tidak (untuk detect data baru di NetSuite)
+    try {
+      const netSuiteService = getNetSuiteCustomerService();
+      const syncResult = await checkAndTriggerIncrementalSync({
+        module: 'customer',
+        netSuiteService: netSuiteService,
+        repository: repository,
+        syncRepository: syncRepository,
+        maxStalenessHours: 12,
+        pageSize: 500,
+      });
 
-        if (syncResult.syncTriggered) {
-          // Return response with sync header
-          res.setHeader('X-Sync-Triggered', 'true');
-          res.setHeader('X-Job-Id', syncResult.jobId);
-          res.setHeader('X-Sync-Reason', syncResult.reason);
-        }
-      } catch (syncError) {
-        Logger.error('Error checking/triggering incremental sync:', syncError);
-        // Continue without failing the request
+      if (syncResult.syncTriggered) {
+        // Return response with sync header
+        res.setHeader('X-Sync-Triggered', 'true');
+        res.setHeader('X-Job-Id', syncResult.jobId);
+        res.setHeader('X-Sync-Reason', syncResult.reason);
       }
+    } catch (syncError) {
+      Logger.error('Error checking/triggering incremental sync:', syncError);
+      // Continue without failing the request
+    }
+
+    // Return empty response jika data kosong
+    if (isEmpty) {
+      return emptyDataResponse(res, page, limit, true);
     }
 
     return baseResponse(res, { 

@@ -1,5 +1,5 @@
 const redis = require('redis');
-const { logger } = require('../utils/logger');
+const { Logger } = require('../utils/logger');
 
 const REDIS_ENABLED = process.env.REDIS_ENABLED === 'true';
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
@@ -14,8 +14,13 @@ let redisClient = null;
  */
 const connectRedis = async () => {
   if (!REDIS_ENABLED) {
-    logger().info('Redis is disabled, skipping connection');
+    Logger.info('Redis is disabled, skipping connection');
     return null;
+  }
+
+  // If already connected, return existing client
+  if (redisClient && redisClient.isReady) {
+    return redisClient;
   }
 
   try {
@@ -23,24 +28,40 @@ const connectRedis = async () => {
       socket: {
         host: REDIS_HOST,
         port: REDIS_PORT,
+        reconnectStrategy: (retries) => {
+          if (retries > 10) {
+            Logger.error('Redis reconnection failed after 10 retries');
+            return new Error('Redis reconnection failed');
+          }
+          return Math.min(retries * 100, 3000);
+        }
       },
       password: REDIS_PASSWORD || undefined,
       database: REDIS_DB,
     });
 
     client.on('error', (err) => {
-      logger().error('Redis Client Error:', err);
+      Logger.error('Redis Client Error:', err);
     });
 
     client.on('connect', () => {
-      logger().info('Redis client connected');
+      Logger.info(`Redis client connecting to ${REDIS_HOST}:${REDIS_PORT}`);
+    });
+
+    client.on('ready', () => {
+      Logger.info(`Redis client ready on ${REDIS_HOST}:${REDIS_PORT}`);
+    });
+
+    client.on('reconnecting', () => {
+      Logger.info('Redis client reconnecting...');
     });
 
     await client.connect();
     redisClient = client;
     return client;
   } catch (error) {
-    logger().error('Error connecting to Redis:', error);
+    Logger.error('Error connecting to Redis:', error);
+    redisClient = null;
     return null;
   }
 };
