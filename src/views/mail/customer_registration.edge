@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html charset=UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pendaftaran customer universal</title>
+    <style>
+        * {
+            font-size: 14px;
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body style="max-width: 600px; margin: 30px auto;">
+    <table style="width:100%">
+        <tr>
+            <td><img src="{{data.LOGO}}" style="width: 100px;" alt="logo"></td>
+            <td align="right" style="font-size: 20px; font-weight: bold;">Universal Collection</td>
+        </tr>
+    </table>
+    @if(data.last_name)
+        <p>Halo! {{data.first_name}} {{data.last_name}}</p>
+    @else
+        <p>Halo! {{data.first_name}}</p>
+    @end
+    <p>Terima kasih Anda telah melakukan pendaftaran akun, berikut informasi akun yang telah didaftarkan:</p>
+    <p>
+    <table>
+        <tr>
+            <td width="150px">Nomor Customer</td>
+            <td>: {{data.customer_no}}</td>
+        </tr>
+        <tr>
+            <td>Nama Customer</td>
+            @if(data.last_name)
+                <td>: {{data.first_name}} {{data.last_name}}</td>
+            @else
+                <td>: {{data.first_name}}</td>
+            @end
+        </tr>
+        <tr>
+            <td>Nomor Handphone</td>
+            <td>: {{data.phone}} </td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td>: {{data.email}}</td>
+        </tr>
+    </table>
+    </p>
+    <p>Selanjutnya Anda bisa melakukan lelang secara online dengan memasukkan Email dan Password melalui 
+    <a href="{{data.ONLINE_AUCTION}}" target="_blank">{{data.ONLINE_AUCTION}}</a>.</p>
+    <p>Salam hangat,<br />Universal Collection</p>
+    <br /><br />
+    <p style="font-size: 12px; color: #999; text-align: center;">Email dikirimkan otomatis melalui sistem, untuk
+        informasi lebih lanjut silahkan menghubungi<br />
+        {{data.EMAIL_CS}} atau {{data.PHONE_CS}}</p>
+</body>
+
+</html>

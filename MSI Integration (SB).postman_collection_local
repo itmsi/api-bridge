@@ -1,0 +1,269 @@
+{
+	"info": {
+		"_postman_id": "58a2eb97-a33b-4239-b308-3e3ae2624d03",
+		"name": "MSI Integration (SB)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "5298423"
+	},
+	"item": [
+		{
+			"name": "Customer (Read)",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://11970733-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=472&deploy=1",
+					"protocol": "https",
+					"host": [
+						"11970733-sb1",
+						"restlets",
+						"api",
+						"netsuite",
+						"com"
+					],
+					"path": [
+						"app",
+						"site",
+						"hosting",
+						"restlet.nl"
+					],
+					"query": [
+						{
+							"key": "script",
+							"value": "472"
+						},
+						{
+							"key": "deploy",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Customer (Create)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"customform\": \"5\",\r\n    \"isperson\": \"F\",\r\n    \"firstname\": \"\",\r\n    \"lastname\": \"\",\r\n    \"companyname\": \"PT ABC\",\r\n    \"subsidiary\": \"1\",\r\n    \"email\": \"abc@test.com\",\r\n    \"phone\": \"62128214884\",\r\n    \"vatregnumber\": \"99.00.000.000\",\r\n    \"autoname\": false,\r\n    \"entityid\": \"CST1200 - PT ABC\",\r\n    \"isinactive\": false,\r\n    \"transactionType\": \"customer\",\r\n    \"address\": [\r\n        {\r\n            \"defaultshipping\": \"TRUE\",\r\n            \"defaultbilling\": \"TRUE\",\r\n            \"country\": \"ID\",\r\n            \"label\": \"PT ABC\",\r\n            \"override_initialvalue\": \"TRUE\",\r\n            \"addrtext\": \"Jl. Kemanggisan No. 10\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://11970733-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=472&deploy=1",
+					"protocol": "https",
+					"host": [
+						"11970733-sb1",
+						"restlets",
+						"api",
+						"netsuite",
+						"com"
+					],
+					"path": [
+						"app",
+						"site",
+						"hosting",
+						"restlet.nl"
+					],
+					"query": [
+						{
+							"key": "script",
+							"value": "472"
+						},
+						{
+							"key": "deploy",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Customer Page",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"customform\": \"5\",\r\n    \"isperson\": \"F\",\r\n    \"firstname\": \"\",\r\n    \"lastname\": \"\",\r\n    \"companyname\": \"PT ABC\",\r\n    \"subsidiary\": \"1\",\r\n    \"email\": \"abc@test.com\",\r\n    \"phone\": \"62128214884\",\r\n    \"vatregnumber\": \"99.00.000.000\",\r\n    \"autoname\": false,\r\n    \"entityid\": \"CST1200 - PT ABC\",\r\n    \"isinactive\": false,\r\n    \"transactionType\": \"customer\",\r\n    \"address\": [\r\n        {\r\n            \"defaultshipping\": \"TRUE\",\r\n            \"defaultbilling\": \"TRUE\",\r\n            \"country\": \"ID\",\r\n            \"label\": \"PT ABC\",\r\n            \"override_initialvalue\": \"TRUE\",\r\n            \"addrtext\": \"Jl. Kemanggisan No. 10\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://11970733-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=472&deploy=1",
+					"protocol": "https",
+					"host": [
+						"11970733-sb1",
+						"restlets",
+						"api",
+						"netsuite",
+						"com"
+					],
+					"path": [
+						"app",
+						"site",
+						"hosting",
+						"restlet.nl"
+					],
+					"query": [
+						{
+							"key": "script",
+							"value": "472"
+						},
+						{
+							"key": "deploy",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Customer (Edit)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"internalid\": 420,\r\n    \"customform\": \"5\",\r\n    \"isperson\": \"F\",\r\n    \"firstname\": \"\",\r\n    \"lastname\": \"\",\r\n    \"companyname\": \"PT ABC - 1234\",\r\n    \"subsidiary\": \"1\",\r\n    \"email\": \"abc@test.com\",\r\n    \"phone\": \"62128214884\",\r\n    \"vatregnumber\": \"99.00.000.000\",\r\n    \"autoname\": false,\r\n    \"entityid\": \"CST1200 - PT ABC - 1234\",\r\n    \"isinactive\": false,\r\n    \"transactionType\": \"customer\",\r\n    \"address\": [\r\n        {\r\n            \"defaultshipping\": \"TRUE\",\r\n            \"defaultbilling\": \"TRUE\",\r\n            \"country\": \"ID\",\r\n            \"label\": \"PT ABC\",\r\n            \"override_initialvalue\": \"TRUE\",\r\n            \"addrtext\": \"Jl. Kemanggisan No. 10\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://11970733-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=472&deploy=1",
+					"protocol": "https",
+					"host": [
+						"11970733-sb1",
+						"restlets",
+						"api",
+						"netsuite",
+						"com"
+					],
+					"path": [
+						"app",
+						"site",
+						"hosting",
+						"restlet.nl"
+					],
+					"query": [
+						{
+							"key": "script",
+							"value": "472"
+						},
+						{
+							"key": "deploy",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "oauth1",
+		"oauth1": [
+			{
+				"key": "tokenSecret",
+				"value": "86291e960ea625a3e62a880e4b02a7192cc8884c815c003756e360f087a40045",
+				"type": "string"
+			},
+			{
+				"key": "token",
+				"value": "20f959fb4f1330e71998b69da3b86c198e5d2527905773f0035a528db31e428b",
+				"type": "string"
+			},
+			{
+				"key": "addParamsToHeader",
+				"value": true,
+				"type": "boolean"
+			},
+			{
+				"key": "signatureMethod",
+				"value": "HMAC-SHA256",
+				"type": "string"
+			},
+			{
+				"key": "addEmptyParamsToSign",
+				"value": true,
+				"type": "boolean"
+			},
+			{
+				"key": "realm",
+				"value": "11970733_SB1",
+				"type": "string"
+			},
+			{
+				"key": "consumerSecret",
+				"value": "e46885e53ed553a8e8bb86174a39323ee5d2c7f5daee6026a35c4dad4a20a40a",
+				"type": "string"
+			},
+			{
+				"key": "consumerKey",
+				"value": "e2b4ee1e5f3ccdf457445322663fa4f1f7e0c948c66c9b9d72ab00a35860d6c2",
+				"type": "string"
+			},
+			{
+				"key": "version",
+				"value": "1.0",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

@@ -1,0 +1,165 @@
+# Configuration
+COMPOSE_FILE_PROD = docker-compose.yml
+COMPOSE_FILE_DEV = docker-compose.dev.yml
+CONTAINER_NAME = core-api-cum
+CONTAINER_NAME_DEV = core-api-cum-dev
+
+# Default target
+.DEFAULT_GOAL := help
+
+# Help target
+help: ## Show this help message
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+# Development commands
+dev: ## Run development server locally
+	yarn dev
+
+start: ## Run production server locally
+	yarn start
+
+# Docker Development commands
+docker-dev-build: ## Build development Docker image
+	docker-compose -f $(COMPOSE_FILE_DEV) build
+
+docker-dev-up: ## Start development environment
+	docker-compose -f $(COMPOSE_FILE_DEV) up -d
+
+docker-dev-up-watch: ## Start development environment with logs
+	docker-compose -f $(COMPOSE_FILE_DEV) up
+
+docker-dev-down: ## Stop development environment
+	docker-compose -f $(COMPOSE_FILE_DEV) down
+
+docker-dev-restart: ## Restart development environment
+	docker-compose -f $(COMPOSE_FILE_DEV) restart
+
+docker-dev-logs: ## Show development logs
+	docker-compose -f $(COMPOSE_FILE_DEV) logs -f
+
+# Docker Production commands
+docker-prod-build: ## Build production Docker image
+	docker-compose -f $(COMPOSE_FILE_PROD) build
+
+docker-prod-up: ## Start production environment
+	docker-compose -f $(COMPOSE_FILE_PROD) up -d
+
+docker-prod-down: ## Stop production environment
+	docker-compose -f $(COMPOSE_FILE_PROD) down
+
+docker-prod-restart: ## Restart production environment
+	docker-compose -f $(COMPOSE_FILE_PROD) restart
+
+docker-prod-logs: ## Show production logs
+	docker-compose -f $(COMPOSE_FILE_PROD) logs -f
+
+# Database commands
+docker-migrate: ## Run database migrations
+	docker-compose -f $(COMPOSE_FILE_PROD) exec $(CONTAINER_NAME) npm run migrate
+
+docker-migrate-dev: ## Run database migrations in development
+	docker-compose -f $(COMPOSE_FILE_DEV) exec $(CONTAINER_NAME_DEV) npm run migrate
+
+docker-migrate-create: ## Create new migration file
+	docker-compose -f $(COMPOSE_FILE_PROD) exec $(CONTAINER_NAME) knex migrate:make $(table) --cwd=src
+
+docker-migrate-rollback: ## Rollback last migration
+	docker-compose -f $(COMPOSE_FILE_PROD) exec $(CONTAINER_NAME) knex migrate:rollback --cwd=src
+
+docker-seed: ## Run database seeds
+	docker-compose -f $(COMPOSE_FILE_PROD) exec $(CONTAINER_NAME) knex seed:run --cwd=src
+
+docker-seed-dev: ## Run database seeds in development
+	docker-compose -f $(COMPOSE_FILE_DEV) exec $(CONTAINER_NAME_DEV) knex seed:run --cwd=src
+
+# Consumer commands
+docker-consumer: ## Start consumer service
+	docker-compose -f $(COMPOSE_FILE_PROD) exec -d $(CONTAINER_NAME) npm run consumer
+
+docker-consumer-career: ## Start career consumer service
+	docker-compose -f $(COMPOSE_FILE_PROD) exec -d $(CONTAINER_NAME) npm run consumer-career
+
+docker-consumer-voucher: ## Start voucher consumer service
+	docker-compose -f $(COMPOSE_FILE_PROD) exec -d $(CONTAINER_NAME) npm run consumer-voucher
+
+docker-consumer-claim-voucher: ## Start claim voucher consumer service
+	docker-compose -f $(COMPOSE_FILE_PROD) exec -d $(CONTAINER_NAME) npm run consumer-claim-voucher
+
+# Job commands
+docker-job-refresh: ## Run refresh job
+	docker-compose -f $(COMPOSE_FILE_PROD) exec -T $(CONTAINER_NAME) node src/job/materialize_one_hour.js
+
+docker-job-inventory: ## Run inventory job
+	docker-compose -f $(COMPOSE_FILE_PROD) exec -T $(CONTAINER_NAME) node src/job/inventory_job.js
+
+docker-job-vehicle-sync: ## Run vehicle sync job
+	docker-compose -f $(COMPOSE_FILE_PROD) exec $(CONTAINER_NAME) node src/job/inventory_sync.js
+
+docker-job-seed-menu: ## Run seed menu job
+	docker-compose -f $(COMPOSE_FILE_PROD) exec $(CONTAINER_NAME) node src/job/seed.js
+
+docker-job-article: ## Run article scheduler job
+	docker-compose -f $(COMPOSE_FILE_PROD) exec $(CONTAINER_NAME) node src/job/web_article_job.js
+
+# Swagger commands
+swagger-enable: ## Enable Swagger documentation
+	./scripts/swagger-control.sh enable
+
+swagger-disable: ## Disable Swagger documentation
+	./scripts/swagger-control.sh disable
+
+swagger-status: ## Check Swagger status
+	./scripts/swagger-control.sh status
+
+# Utility commands
+docker-clean: ## Clean up Docker resources
+	docker system prune -f
+	docker volume prune -f
+
+docker-logs-api: ## Show API container logs
+	docker-compose -f $(COMPOSE_FILE_PROD) logs -f api
+
+docker-logs-api-dev: ## Show API container logs (dev)
+	docker-compose -f $(COMPOSE_FILE_DEV) logs -f api
+
+docker-shell: ## Access API container shell
+	docker-compose -f $(COMPOSE_FILE_PROD) exec $(CONTAINER_NAME) sh
+
+docker-shell-dev: ## Access API container shell (dev)
+	docker-compose -f $(COMPOSE_FILE_DEV) exec $(CONTAINER_NAME_DEV) sh
+
+# Health check
+health: ## Check application health
+	curl -f http://localhost:9501/health || echo "Application is not healthy"
+
+# Install dependencies
+install: ## Install dependencies
+	npm install
+
+install-prod: ## Install production dependencies only
+	npm ci --only=production
+
+# Linting and testing
+lint: ## Run ESLint
+	npm run lint
+
+test: ## Run tests
+	npm test
+
+# Deployment helpers
+deploy-dev: docker-dev-build docker-dev-up ## Deploy to development
+	@echo "Development environment deployed successfully!"
+
+deploy-prod: docker-prod-build docker-prod-up ## Deploy to production
+	@echo "Production environment deployed successfully!"
+
+# Quick start for development
+quick-dev: install docker-dev-up ## Quick start development environment
+	@echo "Development environment started!"
+	@echo "API available at: http://localhost:9501"
+	@echo "PostgreSQL available at: localhost:5432"
+	@echo "Redis available at: localhost:6379"
+	@echo "RabbitMQ Management available at: http://localhost:15672"

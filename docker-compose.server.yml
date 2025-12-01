@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  api:
+    container_name: core-api-msi-server
+    image: core-api-msi-server
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "9509:9509"
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./public:/app/public
+      - ./storages:/app/storages
+    environment:
+      - NODE_ENV=production
+      - APP_PORT=9509
+      - RABBITMQ_URL=amqp://api_user:api_password@103.169.73.226:9505
+      - APM_SERVICE_URL=
+      - APM_SERVICE_NAME=
+      - APM_SERVICE_TOKEN=
+      - ELASTIC_APM_SERVER_URL=
+      - ELASTIC_APM_SECRET_TOKEN=
+      - ELASTIC_APM_SERVICE_NAME=
+      - ELASTIC_APM_ENVIRONMENT=production
+      - ELASTIC_APM_ACTIVE=false
+      - ELASTIC_APM_DISABLED=true
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:9509/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+networks:
+  default:
+    driver: bridge 

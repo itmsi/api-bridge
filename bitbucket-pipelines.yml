@@ -1,0 +1,19 @@
+image: atlassian/default-image:latest
+
+pipelines:
+  branches:
+    develop:
+      - step:
+          name: Deploy to dev
+          runs-on:
+            - 'self.hosted'
+            - 'linux'
+          script:
+            - echo "Deploying to dev..."
+            - pipe: atlassian/ssh-run:0.2.5
+              variables:
+                SSH_USER: $SERVER_DEV_USER
+                SERVER: $SERVER_DEV_IP
+                MODE: 'command'
+                COMMAND: 'cd /deployment/public_html/core-api/ && git pull origin develop'
+            - echo "Deployed!"

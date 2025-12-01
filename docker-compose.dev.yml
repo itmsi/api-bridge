@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  api:
+    container_name: core-api-msi-dev
+    image: core-api-msi-dev
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "9513:9513"
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=development
+      - APP_PORT=9513
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:9513/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    driver: bridge 

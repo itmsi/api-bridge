@@ -1,0 +1,29 @@
+FROM node:22-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install nodemon globally untuk development
+RUN npm install -g nodemon
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install && npm cache clean --force
+
+# Copy application code
+COPY . .
+
+# Create logs directory
+RUN mkdir -p logs
+
+# Expose port
+EXPOSE 9513
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:9513/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
+
+# Start application dengan nodemon untuk auto-reload
+CMD ["nodemon", "src/server.js"] 
