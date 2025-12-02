@@ -52,9 +52,9 @@ const paths = {
   // ...examplePaths,
   ...customerPaths,
   ...vendorPaths,
-  ...syncPaths,
-  ...apiClientPaths,
-  ...netsuiteScriptsPaths,
+  // ...syncPaths,
+  // ...apiClientPaths,
+  // ...netsuiteScriptsPaths,
 };
 
 const index = {
