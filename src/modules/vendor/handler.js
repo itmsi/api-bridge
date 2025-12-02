@@ -154,8 +154,8 @@ const getAll = async (req, res) => {
           const itemModifiedDate = item.last_modified_netsuite ? new Date(item.last_modified_netsuite) : null;
           const dbMaxModifiedDate = dbMaxDate ? new Date(dbMaxDate) : null;
           
-          // Jika item lebih baru dari DB max atau DB kosong, tambahkan ke list sync
-          if (!dbMaxModifiedDate || (itemModifiedDate && itemModifiedDate > dbMaxModifiedDate)) {
+          // Jika item lebih baru atau sama dengan DB max atau DB kosong, tambahkan ke list sync
+          if (!dbMaxModifiedDate || (itemModifiedDate && itemModifiedDate >= dbMaxModifiedDate)) {
             itemsToSync.push(item);
             Logger.info(`[VENDORS/GET] Item akan di-sync: netsuite_id=${item.netsuite_id}, last_modified=${item.last_modified_netsuite}`);
           } else {
