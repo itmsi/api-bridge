@@ -1,5 +1,10 @@
-const repository = require('./postgre_repository');
+const service = require('./service');
 const { baseResponse, errorResponse, emptyDataResponse } = require('../../utils/response');
+
+/**
+ * Controller layer untuk HTTP request/response handling
+ * Hanya menangani request/response, business logic ada di service
+ */
 
 /**
  * Get all items with pagination
@@ -7,7 +12,7 @@ const { baseResponse, errorResponse, emptyDataResponse } = require('../../utils/
 const getAll = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
-    const data = await repository.findAll(page, limit);
+    const data = await service.getAllItems(page, limit);
     
     // Check if data is empty
     if (!data || !data.items || (Array.isArray(data.items) && data.items.length === 0)) {
@@ -26,7 +31,7 @@ const getAll = async (req, res) => {
 const getById = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = await repository.findById(id);
+    const data = await service.getItemById(id);
     
     if (!data) {
       return emptyDataResponse(res, 1, 0, false);
@@ -43,7 +48,7 @@ const getById = async (req, res) => {
  */
 const create = async (req, res) => {
   try {
-    const data = await repository.create(req.body);
+    const data = await service.createItem(req.body);
     return baseResponse(res, data, 'Data berhasil dibuat', 201);
   } catch (error) {
     return errorResponse(res, error);
@@ -56,7 +61,7 @@ const create = async (req, res) => {
 const update = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = await repository.update(id, req.body);
+    const data = await service.updateItem(id, req.body);
     
     if (!data) {
       return emptyDataResponse(res, 1, 0, false);
@@ -74,7 +79,7 @@ const update = async (req, res) => {
 const remove = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await repository.remove(id);
+    const result = await service.deleteItem(id);
     
     if (!result) {
       return emptyDataResponse(res, 1, 0, false);
@@ -92,7 +97,7 @@ const remove = async (req, res) => {
 const restore = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = await repository.restore(id);
+    const data = await service.restoreItem(id);
     
     if (!data) {
       return emptyDataResponse(res, 1, 0, false);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const handler = require('./handler');
+const controller = require('./controller');
 const { verifyApiKey } = require('../../middlewares');
 
 /**
@@ -8,28 +8,28 @@ const { verifyApiKey } = require('../../middlewares');
  * @desc    Get all vendors with pagination dan filtering
  * @access  Protected (API Key required)
  */
-router.post('/get', verifyApiKey, handler.getAll);
+router.post('/get', verifyApiKey, controller.getAll);
 
 /**
  * @route   GET /api/vendors/:id
  * @desc    Get vendor by ID
  * @access  Protected (API Key required)
  */
-router.get('/:id', verifyApiKey, handler.getById);
+router.get('/:id', verifyApiKey, controller.getById);
 
 /**
  * @route   GET /api/vendors/netsuite/:netsuite_id
  * @desc    Get vendor by NetSuite ID
  * @access  Protected (API Key required)
  */
-router.get('/netsuite/:netsuite_id', verifyApiKey, handler.getByNetSuiteId);
+router.get('/netsuite/:netsuite_id', verifyApiKey, controller.getByNetSuiteId);
 
 /**
  * @route   POST /api/vendors/search
  * @desc    Search vendors dari NetSuite (Get Vendor Page)
  * @access  Protected (API Key required)
  */
-router.post('/search', verifyApiKey, handler.searchFromNetSuite);
+router.post('/search', verifyApiKey, controller.searchFromNetSuite);
 
 module.exports = router;
 

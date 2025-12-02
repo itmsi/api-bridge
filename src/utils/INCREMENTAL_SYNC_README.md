@@ -16,10 +16,10 @@ Fungsi ini mengimplementasikan konsep incremental sync dengan cara:
 ```javascript
 const { checkAndTriggerIncrementalSync } = require('../../utils/incremental-sync');
 const { getNetSuiteCustomerService } = require('../../services/netsuite/customer-service');
-const repository = require('./postgre_repository');
-const syncRepository = require('../sync/postgre_repository');
+const repository = require('./repository');
+const syncRepository = require('../sync/repository');
 
-// Di dalam handler GET
+// Di dalam controller atau service
 const syncResult = await checkAndTriggerIncrementalSync({
   module: 'customer',
   netSuiteService: getNetSuiteCustomerService(),
@@ -118,11 +118,9 @@ Atau gunakan custom function `getMaxLastModifiedFromNetSuite` untuk logic khusus
 ### Item Module
 
 ```javascript
-// src/modules/item/handler.js
-const { checkAndTriggerIncrementalSync } = require('../../utils/incremental-sync');
-const { getNetSuiteItemService } = require('../../services/netsuite/item-service');
-const repository = require('./postgre_repository');
-const syncRepository = require('../sync/postgre_repository');
+// src/modules/item/controller.js
+const service = require('./service');
+// Service layer akan menggunakan repository dan syncRepository
 
 const getAll = async (req, res) => {
   try {

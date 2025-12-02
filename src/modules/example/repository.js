@@ -3,6 +3,11 @@ const db = require('../../config/database');
 const TABLE_NAME = 'examples';
 
 /**
+ * Repository layer untuk database operations
+ * Hanya berisi operasi database, tidak ada business logic
+ */
+
+/**
  * Find all items with pagination
  */
 const findAll = async (page = 1, limit = 10) => {

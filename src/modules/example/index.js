@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const handler = require('./handler');
+const controller = require('./controller');
 const {
   createValidation,
   updateValidation,
@@ -20,7 +20,7 @@ router.get(
   '/',
   listValidation,
   validateMiddleware,
-  handler.getAll
+  controller.getAll
 );
 
 /**
@@ -32,7 +32,7 @@ router.get(
   '/:id',
   getByIdValidation,
   validateMiddleware,
-  handler.getById
+  controller.getById
 );
 
 /**
@@ -44,7 +44,7 @@ router.post(
   '/',
   createValidation,
   validateMiddleware,
-  handler.create
+  controller.create
 );
 
 /**
@@ -56,7 +56,7 @@ router.put(
   '/:id',
   updateValidation,
   validateMiddleware,
-  handler.update
+  controller.update
 );
 
 /**
@@ -68,7 +68,7 @@ router.delete(
   '/:id',
   getByIdValidation,
   validateMiddleware,
-  handler.remove
+  controller.remove
 );
 
 /**
@@ -80,7 +80,7 @@ router.post(
   '/:id/restore',
   getByIdValidation,
   validateMiddleware,
-  handler.restore
+  controller.restore
 );
 
 module.exports = router;

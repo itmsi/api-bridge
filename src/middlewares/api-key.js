@@ -1,5 +1,5 @@
 const { errorResponse } = require('../utils/response');
-const apiClientRepository = require('../modules/api_client/postgre_repository');
+const apiClientRepository = require('../modules/api_client/repository');
 
 /**
  * Middleware untuk validasi API Key Authentication

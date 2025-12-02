@@ -6,8 +6,9 @@ Module contoh yang bisa dijadikan template untuk membuat module baru.
 
 ```
 src/modules/example/
-├── handler.js              # Request handlers / Controllers
-├── postgre_repository.js   # Database operations
+├── controller.js           # HTTP request/response handling
+├── service.js              # Business logic
+├── repository.js           # Database operations
 ├── validation.js           # Input validation rules
 ├── index.js               # Route definitions
 └── README.md              # Dokumentasi module (ini)
@@ -281,14 +282,17 @@ Uncomment middleware `verifyToken` di `index.js`:
 ```javascript
 const { verifyToken } = require('../../middlewares');
 
-router.get('/', verifyToken, listValidation, handleValidationErrors, handler.getAll);
+router.get('/', verifyToken, listValidation, handleValidationErrors, controller.getAll);
 ```
 
 ## 📚 Best Practices
 
-1. **Repository Pattern**: Semua database logic ada di `postgre_repository.js`
+1. **MVC Pattern dengan Service Layer**: 
+   - Controller: HTTP request/response handling
+   - Service: Business logic dan orchestration
+   - Repository: Database operations
 2. **Error Handling**: Selalu gunakan try-catch dan return consistent response
-3. **Validation**: Validasi input sebelum masuk ke handler
+3. **Validation**: Validasi input sebelum masuk ke controller
 4. **Soft Delete**: Gunakan `deleted_at` untuk soft delete
 5. **Pagination**: Implement pagination untuk list endpoints
 6. **Indexes**: Tambahkan index untuk kolom yang sering di-query
@@ -299,7 +303,7 @@ router.get('/', verifyToken, listValidation, handleValidationErrors, handler.get
 ## 🎯 Tips
 
 - Gunakan singular untuk nama module, plural untuk endpoint
-- Keep handlers thin, move logic to repository
+- Keep controllers thin, move business logic to service layer
 - Use consistent naming convention
 - Add comments untuk logic yang kompleks
 - Write clear error messages

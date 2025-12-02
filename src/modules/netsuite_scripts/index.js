@@ -1,4 +1,4 @@
-const repository = require('./postgre_repository');
+const repository = require('./repository');
 
 module.exports = {
   ...repository,

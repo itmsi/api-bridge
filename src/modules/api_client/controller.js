@@ -1,6 +1,9 @@
-const repository = require('./postgre_repository');
+const service = require('./service');
 const { baseResponse, errorResponse, emptyDataResponse } = require('../../utils/response');
-const { Logger } = require('../../utils/logger');
+
+/**
+ * Controller layer untuk HTTP request/response handling API Client
+ */
 
 /**
  * Get all API clients
@@ -8,7 +11,7 @@ const { Logger } = require('../../utils/logger');
 const getAll = async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
-    const data = await repository.findAll(page, limit);
+    const data = await service.getAllClients(page, limit);
     
     // Check if data is empty
     if (!data || !data.items || (Array.isArray(data.items) && data.items.length === 0)) {
@@ -27,7 +30,7 @@ const getAll = async (req, res) => {
 const getById = async (req, res) => {
   try {
     const { id } = req.params;
-    const client = await repository.findById(id);
+    const client = await service.getClientById(id);
     
     if (!client) {
       return emptyDataResponse(res, 1, 0, false);
@@ -53,24 +56,15 @@ const register = async (req, res) => {
       return errorResponse(res, { message: 'Name dan API URL diperlukan' }, 400);
     }
 
-    // Check if API URL already registered
-    const existing = await repository.findByApiUrl(api_url);
-    if (existing) {
-      return errorResponse(res, { message: 'API URL sudah terdaftar' }, 400);
-    }
-
-    // Create new API client
-    const client = await repository.create({
+    const client = await service.registerClient({
       name,
       description,
       api_url,
-      ip_whitelist: ip_whitelist || null,
-      rate_limit_per_minute: rate_limit_per_minute || 100,
-      rate_limit_per_hour: rate_limit_per_hour || 1000,
+      ip_whitelist,
+      rate_limit_per_minute,
+      rate_limit_per_hour,
       notes,
     });
-
-    Logger.info(`New API client registered: ${client.name} (${client.api_url})`);
 
     // Return dengan client_secret (hanya sekali saat register)
     return baseResponse(res, {
@@ -86,7 +80,9 @@ const register = async (req, res) => {
       created_at: client.created_at,
     }, 'API client berhasil didaftarkan. Simpan client_key dan client_secret dengan aman!', 201);
   } catch (error) {
-    Logger.error('Error registering API client:', error);
+    if (error.message === 'API URL sudah terdaftar') {
+      return errorResponse(res, { message: error.message }, 400);
+    }
     return errorResponse(res, error);
   }
 };
@@ -99,7 +95,7 @@ const update = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    const updated = await repository.update(id, updateData);
+    const updated = await service.updateClient(id, updateData);
 
     if (!updated) {
       return emptyDataResponse(res, 1, 0, false);
@@ -121,13 +117,11 @@ const regenerateSecret = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const updated = await repository.regenerateSecret(id);
+    const updated = await service.regenerateClientSecret(id);
 
     if (!updated) {
       return emptyDataResponse(res, 1, 0, false);
     }
-
-    Logger.info(`Client secret regenerated for: ${updated.name}`);
 
     // Return new secret (hanya sekali saat regenerate)
     return baseResponse(res, {
@@ -147,14 +141,11 @@ const remove = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const client = await repository.findById(id);
+    const client = await service.deleteClient(id);
+    
     if (!client) {
       return emptyDataResponse(res, 1, 0, false);
     }
-
-    await repository.remove(id);
-
-    Logger.info(`API client deleted: ${client.name}`);
 
     return baseResponse(res, null, 'API client berhasil dihapus');
   } catch (error) {
@@ -169,14 +160,11 @@ const toggleStatus = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const client = await repository.findById(id);
-    if (!client) {
+    const updated = await service.toggleClientStatus(id);
+
+    if (!updated) {
       return emptyDataResponse(res, 1, 0, false);
     }
-
-    const updated = await repository.update(id, {
-      is_active: !client.is_active,
-    });
 
     const { client_secret, ...safeClient } = updated;
 

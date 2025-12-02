@@ -1,8 +1,8 @@
 const amqp = require('amqplib');
 const { logger } = require('../utils/logger');
 const { initializeRabbitMQ, setupQueue, getChannel, publishToRetryQueue, publishToDLX } = require('../utils/rabbitmq-sync');
-const customerRepository = require('../modules/customer/postgre_repository');
-const syncRepository = require('../modules/sync/postgre_repository');
+const customerRepository = require('../modules/customer/repository');
+const syncRepository = require('../modules/sync/repository');
 const { deleteCache, CACHE_KEYS, deleteCacheByPattern } = require('../utils/cache');
 const { getNetSuiteCustomerService } = require('../services/netsuite/customer-service');
 const { metrics } = require('../config/prometheus');

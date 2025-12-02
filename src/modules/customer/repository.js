@@ -4,6 +4,11 @@ const { pgCore } = require('../../config/database');
 const TABLE_NAME = 'customers';
 
 /**
+ * Repository layer untuk database operations Customer
+ * Hanya berisi operasi database, tidak ada business logic
+ */
+
+/**
  * Find all customers with pagination dan filtering
  */
 const findAll = async (filters = {}, page = 1, limit = 10) => {

@@ -4,6 +4,11 @@ const { pgCore } = require('../../config/database');
 const TABLE_NAME = 'vendors';
 
 /**
+ * Repository layer untuk database operations Vendor
+ * Hanya berisi operasi database, tidak ada business logic
+ */
+
+/**
  * Find all vendors with pagination dan filtering
  */
 const findAll = async (filters = {}, page = 1, limit = 10) => {
@@ -69,8 +74,6 @@ const findByNetSuiteId = async (netsuiteId) => {
 /**
  * Upsert vendor (insert atau update berdasarkan netsuite_id)
  * Hanya update jika last_modified_netsuite lebih baru
- * @param {Object} vendorData - Vendor data
- * @param {Object} trx - Optional transaction object
  */
 const upsert = async (vendorData, trx = null) => {
   const {

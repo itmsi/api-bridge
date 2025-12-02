@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const handler = require('./handler');
+const controller = require('./controller');
 // const { verifyToken } = require('../../middlewares'); // Admin authentication
 
 /**
@@ -8,49 +8,49 @@ const handler = require('./handler');
  * @desc    Get all registered API clients
  * @access  Admin (add verifyToken middleware)
  */
-router.get('/', handler.getAll);
+router.get('/', controller.getAll);
 
 /**
  * @route   GET /admin/api-clients/:id
  * @desc    Get API client by ID
  * @access  Admin
  */
-router.get('/:id', handler.getById);
+router.get('/:id', controller.getById);
 
 /**
  * @route   POST /admin/api-clients
  * @desc    Register new API client
  * @access  Admin
  */
-router.post('/', handler.register);
+router.post('/', controller.register);
 
 /**
  * @route   PUT /admin/api-clients/:id
  * @desc    Update API client
  * @access  Admin
  */
-router.put('/:id', handler.update);
+router.put('/:id', controller.update);
 
 /**
  * @route   POST /admin/api-clients/:id/regenerate-secret
  * @desc    Regenerate client secret
  * @access  Admin
  */
-router.post('/:id/regenerate-secret', handler.regenerateSecret);
+router.post('/:id/regenerate-secret', controller.regenerateSecret);
 
 /**
  * @route   POST /admin/api-clients/:id/toggle-status
  * @desc    Toggle active status
  * @access  Admin
  */
-router.post('/:id/toggle-status', handler.toggleStatus);
+router.post('/:id/toggle-status', controller.toggleStatus);
 
 /**
  * @route   DELETE /admin/api-clients/:id
  * @desc    Delete API client
  * @access  Admin
  */
-router.delete('/:id', handler.remove);
+router.delete('/:id', controller.remove);
 
 module.exports = router;
 

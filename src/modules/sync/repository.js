@@ -5,6 +5,10 @@ const SYNC_JOBS_TABLE = 'sync_jobs';
 const FAILED_JOBS_TABLE = 'failed_jobs';
 
 /**
+ * Repository layer untuk database operations Sync
+ */
+
+/**
  * Sync Tracker Repository
  */
 
@@ -50,13 +54,6 @@ const upsertSyncTracker = async (module, data) => {
 };
 
 /**
- * Update sync tracker status
- */
-const updateSyncTrackerStatus = async (module, status, remark = null) => {
-  return await upsertSyncTracker(module, { status, remark });
-};
-
-/**
  * Sync Jobs Repository
  */
 
@@ -81,6 +78,20 @@ const getSyncJob = async (jobId) => {
   return await db(SYNC_JOBS_TABLE)
     .where({ job_id: jobId })
     .first();
+};
+
+/**
+ * Update sync job
+ */
+const updateSyncJob = async (jobId, updateData) => {
+  const [updated] = await db(SYNC_JOBS_TABLE)
+    .where({ job_id: jobId })
+    .update({
+      ...updateData,
+      updated_at: new Date(),
+    })
+    .returning('*');
+  return updated;
 };
 
 /**
@@ -128,11 +139,18 @@ const incrementSyncJobAttempts = async (jobId) => {
 };
 
 /**
+ * Update sync tracker status
+ */
+const updateSyncTrackerStatus = async (module, status, remark = null) => {
+  return await upsertSyncTracker(module, { status, remark });
+};
+
+/**
  * Failed Jobs Repository
  */
 
 /**
- * Create failed job record
+ * Create failed job
  */
 const createFailedJob = async (jobId, module, payload, error, stackTrace, attempts) => {
   const [created] = await db(FAILED_JOBS_TABLE)
@@ -159,22 +177,23 @@ const getFailedJob = async (jobId) => {
 };
 
 /**
- * Get all failed jobs
+ * Get all failed jobs dengan pagination
  */
 const getFailedJobs = async (module = null, page = 1, limit = 50) => {
   const offset = (page - 1) * limit;
   
-  let query = db(FAILED_JOBS_TABLE).select('*');
+  let query = db(FAILED_JOBS_TABLE)
+    .select('*')
+    .orderBy('created_at', 'desc');
 
   if (module) {
     query = query.where({ module });
   }
 
   const data = await query
-    .orderBy('created_at', 'desc')
     .limit(limit)
     .offset(offset);
-
+    
   const totalResult = await db(FAILED_JOBS_TABLE)
     .modify((queryBuilder) => {
       if (module) {
@@ -183,20 +202,28 @@ const getFailedJobs = async (module = null, page = 1, limit = 50) => {
     })
     .count('id as count')
     .first();
-
-  // Handle case when table is empty or count returns null/undefined
+    
   const total = totalResult?.count ? parseInt(totalResult.count) : 0;
   const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
-
+    
   return {
     items: data || [],
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
       total: total,
-      totalPages: totalPages,
-    },
+      totalPages: totalPages
+    }
   };
+};
+
+/**
+ * Delete failed job
+ */
+const deleteFailedJob = async (jobId) => {
+  return await db(FAILED_JOBS_TABLE)
+    .where({ job_id: jobId })
+    .del();
 };
 
 module.exports = {
@@ -204,16 +231,16 @@ module.exports = {
   getSyncTracker,
   upsertSyncTracker,
   updateSyncTrackerStatus,
-  
   // Sync Jobs
   createSyncJob,
   getSyncJob,
+  updateSyncJob,
   updateSyncJobStatus,
   incrementSyncJobAttempts,
-  
   // Failed Jobs
   createFailedJob,
   getFailedJob,
   getFailedJobs,
+  deleteFailedJob,
 };
 

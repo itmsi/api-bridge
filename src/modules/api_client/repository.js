@@ -5,6 +5,10 @@ const crypto = require('crypto');
 const TABLE_NAME = 'api_clients';
 
 /**
+ * Repository layer untuk database operations API Client
+ */
+
+/**
  * Generate client key dan secret
  */
 const generateCredentials = () => {
