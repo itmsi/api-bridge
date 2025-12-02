@@ -43,42 +43,73 @@ const vendorSchemas = {
   },
   VendorListResponse: {
     type: 'object',
+    description: 'Response format sesuai dengan NetSuite pagination format',
     properties: {
       success: {
         type: 'boolean',
         example: true
       },
-      data: {
-        type: 'object',
-        properties: {
-          items: {
-            type: 'array',
-            items: { $ref: '#/components/schemas/Vendor' }
-          },
-          pagination: { $ref: '#/components/schemas/Pagination' }
-        }
+      pageIndex: {
+        type: 'integer',
+        description: 'Current page index (0-based)',
+        example: 0
       },
-      fromCache: {
-        type: 'boolean',
-        description: 'Indicates if response was served from cache',
-        example: false
+      pageSize: {
+        type: 'integer',
+        description: 'Items per page',
+        example: 50
+      },
+      totalRows: {
+        type: 'integer',
+        description: 'Total number of rows',
+        example: 5
+      },
+      totalPages: {
+        type: 'integer',
+        description: 'Total number of pages',
+        example: 1
+      },
+      items: {
+        type: 'array',
+        description: 'Array of vendor items',
+        items: { $ref: '#/components/schemas/Vendor' }
       }
     }
   },
   VendorGetRequest: {
     type: 'object',
     properties: {
+      pageSize: {
+        type: 'integer',
+        description: 'Items per page (NetSuite format)',
+        default: 50,
+        minimum: 1,
+        maximum: 1000,
+        example: 50
+      },
+      pageIndex: {
+        type: 'integer',
+        description: 'Page index (0-based, NetSuite format)',
+        default: 0,
+        minimum: 0,
+        example: 0
+      },
+      lastmodified: {
+        type: 'string',
+        nullable: true,
+        description: 'Filter by last modified date (format: DD/MM/YYYY). Jika tidak disediakan, akan menggunakan max(last_modified_netsuite) dari DB.',
+        example: '21/11/2025'
+      },
+      // Legacy support
       page: {
         type: 'integer',
-        description: 'Page number',
-        default: 1,
+        description: 'Page number (1-based, legacy format - will be converted to pageIndex)',
         minimum: 1,
         example: 1
       },
       limit: {
         type: 'integer',
-        description: 'Items per page',
-        default: 10,
+        description: 'Items per page (legacy format - will be converted to pageSize)',
         minimum: 1,
         maximum: 100,
         example: 10

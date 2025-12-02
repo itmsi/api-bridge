@@ -8,15 +8,16 @@ const vendorPaths = {
       tags: ['Vendors'],
       summary: 'Get all vendors',
       security: [{ ApiKeyAuth: [], ApiSecretAuth: [] }],
-      description: 'Retrieve all vendors with pagination, filtering, and on-demand incremental sync. Sistem akan secara otomatis: 1) Hit ke API NetSuite untuk cek lastupdate all data, 2) Cek data lastupdate yang ada di DB internal, 3) Sync data yang lebih besar dari lastupdate-nya jika diperlukan. Returns cached data if available, triggers incremental sync if data is stale or newer data exists in NetSuite.',
+      description: 'Retrieve all vendors with pagination, filtering, and on-demand incremental sync. Format request: { pageSize, pageIndex, lastmodified }. Format response: { success, pageIndex, pageSize, totalRows, totalPages, items }. Sistem akan secara otomatis: 1) Hit ke API NetSuite untuk mendapatkan data terbaru dengan looping untuk semua halaman (jika ada lebih dari pageSize data), 2) Cek data lastupdate yang ada di DB internal, 3) Sync data yang lebih besar dari lastupdate-nya jika diperlukan. Returns cached data if available, triggers incremental sync if data is stale or newer data exists in NetSuite.',
       requestBody: {
         required: false,
         content: {
           'application/json': {
             schema: { $ref: '#/components/schemas/VendorGetRequest' },
             example: {
-              page: 1,
-              limit: 10,
+              pageSize: 50,
+              pageIndex: 0,
+              lastmodified: '21/11/2025',
               email: null,
               name: null,
               netsuite_id: null

@@ -40,12 +40,35 @@ const transformVendorForResponse = (vendor) => {
 /**
  * Get all vendors dengan pagination dan filtering
  * Implementasi on-demand incremental sync: cache -> DB -> sync from NetSuite
+ * Format request: { pageSize, pageIndex, lastmodified }
+ * Format response: { success, pageIndex, pageSize, totalRows, totalPages, items }
  */
 const getAll = async (req, res) => {
   try {
-    const { page = 1, limit = 10, email, name, netsuite_id } = req.body;
+    // Support both old format (page, limit) and new format (pageSize, pageIndex, lastmodified)
+    const { 
+      page = null,
+      limit = null,
+      pageIndex = null, 
+      pageSize = 50, 
+      lastmodified = null,
+      email, 
+      name, 
+      netsuite_id 
+    } = req.body;
     
-    Logger.info('[VENDORS/GET] Request received', { page, limit, email, name, netsuite_id });
+    // Convert old format to new format
+    const finalPageIndex = pageIndex !== null ? pageIndex : (page !== null ? page - 1 : 0);
+    const finalPageSize = pageSize || limit || 50;
+    
+    Logger.info('[VENDORS/GET] Request received', { 
+      pageIndex: finalPageIndex, 
+      pageSize: finalPageSize, 
+      lastmodified,
+      email, 
+      name, 
+      netsuite_id 
+    });
     
     // Build filters
     const filters = {};
@@ -55,8 +78,9 @@ const getAll = async (req, res) => {
 
     // Generate cache key
     const cacheKey = generateCacheKey(CACHE_KEYS.VENDOR_LIST(''), {
-      page,
-      limit,
+      pageIndex: finalPageIndex,
+      pageSize: finalPageSize,
+      lastmodified,
       ...filters,
     });
 
@@ -66,16 +90,23 @@ const getAll = async (req, res) => {
       Logger.info(`[VENDORS/GET] Cache HIT for vendor list: ${cacheKey}`);
       // Transform cached items untuk response
       const transformedCachedItems = cachedData.items?.map(item => transformVendorForResponse(item)) || [];
-      return baseResponse(res, { 
+      // Return dengan format NetSuite pagination
+      return res.status(200).json({
+        success: true,
+        pageIndex: finalPageIndex,
+        pageSize: finalPageSize,
+        totalRows: cachedData.pagination?.total || transformedCachedItems.length,
+        totalPages: cachedData.pagination?.totalPages || (transformedCachedItems.length > 0 ? 1 : 0),
         items: transformedCachedItems,
-        pagination: cachedData.pagination,
-        fromCache: true,
       });
     }
 
     // Cache miss, get from DB
     Logger.info(`[VENDORS/GET] Cache MISS for vendor list: ${cacheKey}`);
-    let data = await repository.findAll(filters, page, limit);
+    // Convert pageIndex to page (1-based) untuk repository
+    const dbPage = finalPageIndex + 1;
+    const dbLimit = finalPageSize;
+    let data = await repository.findAll(filters, dbPage, dbLimit);
     Logger.info(`[VENDORS/GET] Data from DB: ${data?.items?.length || 0} items`);
 
     // Check if data is empty
@@ -103,97 +134,124 @@ const getAll = async (req, res) => {
       
       // 2. Hit ke NetSuite untuk mendapatkan data terbaru
       // Format lastmodified: "DD/MM/YYYY" (hanya tanggal, tanpa waktu)
-      let lastmodifiedParam = null;
-      if (dbMaxDate) {
+      // Gunakan lastmodified dari request body jika ada, jika tidak gunakan dbMaxDate
+      let lastmodifiedParam = lastmodified;
+      if (!lastmodifiedParam && dbMaxDate) {
         const dbDate = new Date(dbMaxDate);
         const day = String(dbDate.getDate()).padStart(2, '0');
         const month = String(dbDate.getMonth() + 1).padStart(2, '0');
         const year = dbDate.getFullYear();
         lastmodifiedParam = `${day}/${month}/${year}`;
-        Logger.info(`[VENDORS/GET] Format lastmodified param: ${lastmodifiedParam}`);
+        Logger.info(`[VENDORS/GET] Format lastmodified param dari DB: ${lastmodifiedParam}`);
+      } else if (lastmodifiedParam) {
+        Logger.info(`[VENDORS/GET] Menggunakan lastmodified dari request: ${lastmodifiedParam}`);
       } else {
-        Logger.info(`[VENDORS/GET] DB kosong, akan fetch semua data dari NetSuite`);
+        Logger.info(`[VENDORS/GET] DB kosong dan tidak ada lastmodified, akan fetch semua data dari NetSuite`);
       }
       
-      // 3. Fetch data dari NetSuite (page pertama)
-      let netSuiteResponse = null;
-      try {
-        Logger.info(`[VENDORS/GET] Hitting NetSuite API...`, { pageIndex: 0, pageSize: 50, lastmodified: lastmodifiedParam });
-        netSuiteResponse = await netSuiteService.getVendorsPage({
-          pageIndex: 0,
-          pageSize: 50,
-          lastmodified: lastmodifiedParam,
-        });
-        Logger.info(`[VENDORS/GET] NetSuite response received: ${netSuiteResponse?.items?.length || 0} items`);
-        Logger.info(`[VENDORS/GET] NetSuite response details:`, {
-          hasMore: netSuiteResponse?.hasMore,
-          totalResults: netSuiteResponse?.totalResults,
-          pageIndex: netSuiteResponse?.pageIndex,
-          pageSize: netSuiteResponse?.pageSize,
-        });
-      } catch (netsuiteError) {
-        Logger.error('[VENDORS/GET] Error fetching from NetSuite API:', {
-          message: netsuiteError?.message || 'Unknown error',
-          stack: netsuiteError?.stack,
-          name: netsuiteError?.name,
-          code: netsuiteError?.code,
-          response: netsuiteError?.response ? {
-            status: netsuiteError.response.status,
-            statusText: netsuiteError.response.statusText,
-            data: netsuiteError.response.data,
-          } : null,
-        });
-        throw netsuiteError;
-      }
+      // 3. Fetch data dari NetSuite dengan looping untuk semua halaman
+      let allItemsToSync = [];
+      let currentPageIndex = 0;
+      let hasMore = true;
+      const syncPageSize = 50; // Fixed page size untuk sync dari NetSuite
       
-      // 4. Bandingkan dan sync data yang lebih baru
-      if (netSuiteResponse && netSuiteResponse.items && netSuiteResponse.items.length > 0) {
-        const itemsToSync = [];
-        
-        for (const item of netSuiteResponse.items) {
-          const itemModifiedDate = item.last_modified_netsuite ? new Date(item.last_modified_netsuite) : null;
-          const dbMaxModifiedDate = dbMaxDate ? new Date(dbMaxDate) : null;
+      while (hasMore) {
+        try {
+          Logger.info(`[VENDORS/GET] Hitting NetSuite API...`, { 
+            pageIndex: currentPageIndex, 
+            pageSize: syncPageSize, 
+            lastmodified: lastmodifiedParam 
+          });
           
-          // Jika item lebih baru atau sama dengan DB max atau DB kosong, tambahkan ke list sync
-          if (!dbMaxModifiedDate || (itemModifiedDate && itemModifiedDate >= dbMaxModifiedDate)) {
-            itemsToSync.push(item);
-            Logger.info(`[VENDORS/GET] Item akan di-sync: netsuite_id=${item.netsuite_id}, last_modified=${item.last_modified_netsuite}`);
-          } else {
-            Logger.info(`[VENDORS/GET] Item di-skip (tidak lebih baru): netsuite_id=${item.netsuite_id}, last_modified=${item.last_modified_netsuite}`);
-          }
-        }
-        
-        // 5. Upsert data yang lebih baru ke DB
-        if (itemsToSync.length > 0) {
-          try {
-            Logger.info(`[VENDORS/GET] Syncing ${itemsToSync.length} vendor(s) from NetSuite to DB`);
-            await repository.batchUpsert(itemsToSync);
-            syncedCount = itemsToSync.length;
-            Logger.info(`[VENDORS/GET] Successfully synced ${syncedCount} vendor(s) to DB`);
+          const netSuiteResponse = await netSuiteService.getVendorsPage({
+            pageIndex: currentPageIndex,
+            pageSize: syncPageSize,
+            lastmodified: lastmodifiedParam,
+          });
           
-            // Invalidate cache
-            await deleteCacheByPattern('vendor:list:*');
-            for (const item of itemsToSync) {
-              await deleteCache(CACHE_KEYS.VENDOR(item.netsuite_id));
+          Logger.info(`[VENDORS/GET] NetSuite response received: ${netSuiteResponse?.items?.length || 0} items`);
+          Logger.info(`[VENDORS/GET] NetSuite response details:`, {
+            hasMore: netSuiteResponse?.hasMore,
+            totalResults: netSuiteResponse?.totalResults,
+            pageIndex: netSuiteResponse?.pageIndex,
+            pageSize: netSuiteResponse?.pageSize,
+            totalPages: netSuiteResponse?.totalPages,
+          });
+          
+          // 4. Bandingkan dan filter data yang lebih baru
+          if (netSuiteResponse && netSuiteResponse.items && netSuiteResponse.items.length > 0) {
+            for (const item of netSuiteResponse.items) {
+              const itemModifiedDate = item.last_modified_netsuite ? new Date(item.last_modified_netsuite) : null;
+              const dbMaxModifiedDate = dbMaxDate ? new Date(dbMaxDate) : null;
+              
+              // Jika item lebih baru atau sama dengan DB max atau DB kosong, tambahkan ke list sync
+              if (!dbMaxModifiedDate || (itemModifiedDate && itemModifiedDate >= dbMaxModifiedDate)) {
+                allItemsToSync.push(item);
+                Logger.info(`[VENDORS/GET] Item akan di-sync: netsuite_id=${item.netsuite_id}, last_modified=${item.last_modified_netsuite}`);
+              } else {
+                Logger.info(`[VENDORS/GET] Item di-skip (tidak lebih baru): netsuite_id=${item.netsuite_id}, last_modified=${item.last_modified_netsuite}`);
+              }
             }
-            Logger.info(`[VENDORS/GET] Cache invalidated`);
-          
-            // Set header untuk indikasi sync
-            res.setHeader('X-Sync-Triggered', 'true');
-            res.setHeader('X-Synced-Count', itemsToSync.length.toString());
-          } catch (dbSyncError) {
-            Logger.error('[VENDORS/GET] Error syncing data to DB:', {
-              message: dbSyncError?.message,
-              stack: dbSyncError?.stack,
-              itemsCount: itemsToSync.length,
-            });
-            throw dbSyncError;
+            
+            // Check if there are more pages
+            hasMore = netSuiteResponse.hasMore || false;
+            if (hasMore) {
+              currentPageIndex++;
+              Logger.info(`[VENDORS/GET] Ada halaman selanjutnya, akan fetch page ${currentPageIndex}`);
+            } else {
+              Logger.info(`[VENDORS/GET] Tidak ada halaman selanjutnya, selesai fetch dari NetSuite`);
+            }
+          } else {
+            // No more items
+            hasMore = false;
+            Logger.info(`[VENDORS/GET] NetSuite response kosong, selesai fetch`);
           }
-        } else {
-          Logger.info(`[VENDORS/GET] Tidak ada data baru dari NetSuite untuk di-sync`);
+        } catch (netsuiteError) {
+          Logger.error('[VENDORS/GET] Error fetching from NetSuite API:', {
+            message: netsuiteError?.message || 'Unknown error',
+            stack: netsuiteError?.stack,
+            name: netsuiteError?.name,
+            code: netsuiteError?.code,
+            response: netsuiteError?.response ? {
+              status: netsuiteError.response.status,
+              statusText: netsuiteError.response.statusText,
+              data: netsuiteError.response.data,
+            } : null,
+          });
+          // Stop looping on error
+          hasMore = false;
+          throw netsuiteError;
+        }
+      }
+      
+      // 5. Upsert semua data yang lebih baru ke DB
+      if (allItemsToSync.length > 0) {
+        try {
+          Logger.info(`[VENDORS/GET] Syncing ${allItemsToSync.length} vendor(s) from NetSuite to DB`);
+          await repository.batchUpsert(allItemsToSync);
+          syncedCount = allItemsToSync.length;
+          Logger.info(`[VENDORS/GET] Successfully synced ${syncedCount} vendor(s) to DB`);
+        
+          // Invalidate cache
+          await deleteCacheByPattern('vendor:list:*');
+          for (const item of allItemsToSync) {
+            await deleteCache(CACHE_KEYS.VENDOR(item.netsuite_id));
+          }
+          Logger.info(`[VENDORS/GET] Cache invalidated`);
+        
+          // Set header untuk indikasi sync
+          res.setHeader('X-Sync-Triggered', 'true');
+          res.setHeader('X-Synced-Count', allItemsToSync.length.toString());
+        } catch (dbSyncError) {
+          Logger.error('[VENDORS/GET] Error syncing data to DB:', {
+            message: dbSyncError?.message,
+            stack: dbSyncError?.stack,
+            itemsCount: allItemsToSync.length,
+          });
+          throw dbSyncError;
         }
       } else {
-        Logger.info(`[VENDORS/GET] NetSuite response kosong atau tidak ada items`);
+        Logger.info(`[VENDORS/GET] Tidak ada data baru dari NetSuite untuk di-sync`);
       }
     } catch (syncError) {
       // Log error dengan detail lengkap
@@ -226,7 +284,7 @@ const getAll = async (req, res) => {
     // Setelah sync, ambil ulang data dari DB untuk memastikan data terbaru
     if (syncedCount > 0) {
       Logger.info(`[VENDORS/GET] Re-fetching data from DB setelah sync...`);
-      data = await repository.findAll(filters, page, limit);
+      data = await repository.findAll(filters, dbPage, dbLimit);
       Logger.info(`[VENDORS/GET] Data setelah sync: ${data?.items?.length || 0} items`);
     }
 
@@ -237,20 +295,23 @@ const getAll = async (req, res) => {
       Logger.info(`[VENDORS/GET] Cache set untuk key: ${cacheKey}`);
     }
 
-    // Return empty response jika data kosong
-    if (finalIsEmpty) {
-      Logger.info(`[VENDORS/GET] Returning empty response`);
-      return emptyDataResponse(res, page, limit, true);
-    }
-
     // Transform items untuk response
-    const transformedItems = data.items.map(item => transformVendorForResponse(item));
+    const transformedItems = finalIsEmpty ? [] : data.items.map(item => transformVendorForResponse(item));
     
-    Logger.info(`[VENDORS/GET] Returning data: ${transformedItems.length} items`);
-    return baseResponse(res, { 
+    // Calculate pagination info sesuai format NetSuite
+    const totalRows = data?.pagination?.total || transformedItems.length;
+    const totalPages = data?.pagination?.totalPages || (totalRows > 0 ? Math.ceil(totalRows / finalPageSize) : 0);
+    
+    Logger.info(`[VENDORS/GET] Returning data: ${transformedItems.length} items, totalRows: ${totalRows}, totalPages: ${totalPages}`);
+    
+    // Return dengan format NetSuite pagination
+    return res.status(200).json({
+      success: true,
+      pageIndex: finalPageIndex,
+      pageSize: finalPageSize,
+      totalRows: totalRows,
+      totalPages: totalPages,
       items: transformedItems,
-      pagination: data.pagination,
-      fromCache: false,
     });
   } catch (error) {
     Logger.error('[VENDORS/GET] Error:', error);
