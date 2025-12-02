@@ -14,12 +14,6 @@ const findAll = async (filters = {}, page = 1, limit = 10) => {
     .where({ is_deleted: false });
 
   // Apply filters
-  if (filters.email) {
-    query = query.where('email', 'ilike', `%${filters.email}%`);
-  }
-  if (filters.name) {
-    query = query.where('name', 'ilike', `%${filters.name}%`);
-  }
   if (filters.netsuite_id) {
     query = query.where('netsuite_id', filters.netsuite_id);
   }
@@ -32,12 +26,6 @@ const findAll = async (filters = {}, page = 1, limit = 10) => {
   const totalResult = await db(TABLE_NAME)
     .where({ is_deleted: false })
     .modify((queryBuilder) => {
-      if (filters.email) {
-        queryBuilder.where('email', 'ilike', `%${filters.email}%`);
-      }
-      if (filters.name) {
-        queryBuilder.where('name', 'ilike', `%${filters.name}%`);
-      }
       if (filters.netsuite_id) {
         queryBuilder.where('netsuite_id', filters.netsuite_id);
       }

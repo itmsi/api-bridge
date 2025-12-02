@@ -8,7 +8,7 @@ const vendorPaths = {
       tags: ['Vendors'],
       summary: 'Get all vendors',
       security: [{ ApiKeyAuth: [], ApiSecretAuth: [] }],
-      description: 'Retrieve all vendors with pagination, filtering, and on-demand incremental sync. Format request: { pageSize, pageIndex, lastmodified }. Format response: { success, pageIndex, pageSize, totalRows, totalPages, items }. Setiap item dalam response akan di-transform dan berisi: id, name, email, phone, entityId (dari data JSON), companyName (dari data JSON). Sistem akan secara otomatis: 1) Hit ke API NetSuite untuk mendapatkan data terbaru dengan looping untuk semua halaman (jika ada lebih dari pageSize data), 2) Bandingkan lastModifiedDate dari NetSuite dengan max(last_modified_netsuite) di DB, 3) Sync (insert/update) data yang lebih baru ke DB, 4) Skip jika tidak ada data yang lebih baru. Returns cached data if available, automatically syncs newer data from NetSuite if found.',
+      description: 'Retrieve all vendors with pagination, filtering, and on-demand incremental sync. Format request: { pageSize, pageIndex, lastmodified, netsuite_id }. Format response: { success, pageIndex, pageSize, totalRows, totalPages, items }. Setiap item dalam response akan di-transform dan berisi: id, name, email, phone, entityId (dari data JSON), companyName (dari data JSON). Sistem akan secara otomatis: 1) Hit ke API NetSuite untuk mendapatkan data terbaru dengan looping untuk semua halaman (jika ada lebih dari pageSize data), 2) Bandingkan lastModifiedDate dari NetSuite dengan max(last_modified_netsuite) di DB, 3) Sync (insert/update) data yang lebih baru ke DB, 4) Skip jika tidak ada data yang lebih baru. Returns cached data if available, automatically syncs newer data from NetSuite if found.',
       requestBody: {
         required: false,
         content: {
@@ -18,8 +18,6 @@ const vendorPaths = {
               pageSize: 50,
               pageIndex: 0,
               lastmodified: '2025-11-21T10:00:00+07:00',
-              email: null,
-              name: null,
               netsuite_id: null
             }
           }
@@ -27,7 +25,7 @@ const vendorPaths = {
       },
       responses: {
         200: {
-          description: 'Success - Returns vendor list. May trigger incremental sync in background if data is stale or newer data exists in NetSuite.',
+          description: 'Success - Returns vendor list. Automatically syncs newer data from NetSuite if found during the request.',
           headers: {
             'X-Sync-Triggered': {
               description: 'Indicates if an incremental sync was triggered',

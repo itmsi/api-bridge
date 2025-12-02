@@ -247,34 +247,8 @@ const customerSchemas = {
       lastmodified: {
         type: 'string',
         nullable: true,
-        description: 'Filter by last modified date (format: ISO 8601 dengan timezone, contoh: YYYY-MM-DDTHH:mm:ss+07:00). Jika tidak disediakan, akan menggunakan max(last_modified_netsuite) dari DB yang dikonversi ke format ISO 8601.',
+        description: 'Filter by last modified date (format: ISO 8601 dengan timezone, contoh: YYYY-MM-DDTHH:mm:ss+07:00). Jika tidak disediakan, akan menggunakan max(last_modified_netsuite) dari DB.',
         example: '2025-11-21T10:00:00+07:00'
-      },
-      // Legacy support
-      page: {
-        type: 'integer',
-        description: 'Page number (1-based, legacy format - will be converted to pageIndex)',
-        minimum: 1,
-        example: 1
-      },
-      limit: {
-        type: 'integer',
-        description: 'Items per page (legacy format - will be converted to pageSize)',
-        minimum: 1,
-        maximum: 100,
-        example: 10
-      },
-      email: {
-        type: 'string',
-        nullable: true,
-        description: 'Filter by email (partial match)',
-        example: 'abc@example.com'
-      },
-      name: {
-        type: 'string',
-        nullable: true,
-        description: 'Filter by name (partial match)',
-        example: 'PT ABC'
       },
       netsuite_id: {
         type: 'string',
