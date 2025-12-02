@@ -247,8 +247,8 @@ const customerSchemas = {
       lastmodified: {
         type: 'string',
         nullable: true,
-        description: 'Filter by last modified date (format: DD/MM/YYYY). Jika tidak disediakan, akan menggunakan max(last_modified_netsuite) dari DB.',
-        example: '21/11/2025'
+        description: 'Filter by last modified date (format: ISO 8601 dengan timezone, contoh: YYYY-MM-DDTHH:mm:ss+07:00). Jika tidak disediakan, akan menggunakan max(last_modified_netsuite) dari DB yang dikonversi ke format ISO 8601.',
+        example: '2025-11-21T10:00:00+07:00'
       },
       // Legacy support
       page: {
@@ -305,8 +305,8 @@ const customerSchemas = {
       lastmodified: {
         type: 'string',
         nullable: true,
-        description: 'Filter by last modified date (format: DD/MM/YYYY)',
-        example: '21/11/2025'
+        description: 'Filter by last modified date (format: ISO 8601 dengan timezone, contoh: YYYY-MM-DDTHH:mm:ss+07:00)',
+        example: '2025-11-21T10:00:00+07:00'
       },
       // Legacy support
       page: {

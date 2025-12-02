@@ -133,15 +133,19 @@ const getAll = async (req, res) => {
       }
       
       // 2. Hit ke NetSuite untuk mendapatkan data terbaru
-      // Format lastmodified: "DD/MM/YYYY" (hanya tanggal, tanpa waktu)
+      // Format lastmodified: "YYYY-MM-DDTHH:mm:ss+07:00" (ISO 8601 dengan timezone)
       // Gunakan lastmodified dari request body jika ada, jika tidak gunakan dbMaxDate
       let lastmodifiedParam = lastmodified;
       if (!lastmodifiedParam && dbMaxDate) {
         const dbDate = new Date(dbMaxDate);
-        const day = String(dbDate.getDate()).padStart(2, '0');
-        const month = String(dbDate.getMonth() + 1).padStart(2, '0');
+        // Konversi ke format ISO 8601 dengan timezone +07:00
         const year = dbDate.getFullYear();
-        lastmodifiedParam = `${day}/${month}/${year}`;
+        const month = String(dbDate.getMonth() + 1).padStart(2, '0');
+        const day = String(dbDate.getDate()).padStart(2, '0');
+        const hours = String(dbDate.getHours()).padStart(2, '0');
+        const minutes = String(dbDate.getMinutes()).padStart(2, '0');
+        const seconds = String(dbDate.getSeconds()).padStart(2, '0');
+        lastmodifiedParam = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+07:00`;
         Logger.info(`[VENDORS/GET] Format lastmodified param dari DB: ${lastmodifiedParam}`);
       } else if (lastmodifiedParam) {
         Logger.info(`[VENDORS/GET] Menggunakan lastmodified dari request: ${lastmodifiedParam}`);

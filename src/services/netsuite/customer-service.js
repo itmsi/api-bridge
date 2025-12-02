@@ -222,13 +222,27 @@ class NetSuiteCustomerService {
   }
 
   /**
-   * Parse date dari format NetSuite "DD/MM/YYYY HH:MM AM/PM" atau "DD/MM/YYYY" ke ISO format
+   * Parse date dari format NetSuite
+   * Format baru: "YYYY-MM-DDTHH:mm:ss+07:00" (ISO 8601 dengan timezone)
+   * Format lama: "DD/MM/YYYY HH:MM AM/PM" atau "DD/MM/YYYY"
    */
   parseNetSuiteDate(dateString) {
     if (!dateString) return null;
 
     try {
-      // Format dengan waktu: "21/11/2025 11:28 AM" atau "21/11/2025 3:07 PM"
+      // Format baru: ISO 8601 dengan timezone "2025-12-02T08:56:00+07:00"
+      const iso8601Pattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})([+-]\d{2}:\d{2})$/;
+      const iso8601Match = dateString.match(iso8601Pattern);
+
+      if (iso8601Match) {
+        // Parse ISO 8601 format dengan timezone
+        const parsed = new Date(dateString);
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toISOString();
+        }
+      }
+
+      // Format lama dengan waktu: "21/11/2025 11:28 AM" atau "21/11/2025 3:07 PM"
       const dateTimePattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s+(AM|PM)$/i;
       const dateTimeMatch = dateString.match(dateTimePattern);
 
@@ -253,7 +267,7 @@ class NetSuiteCustomerService {
         return date.toISOString();
       }
 
-      // Format tanpa waktu: "21/11/2025"
+      // Format lama tanpa waktu: "21/11/2025"
       const dateOnlyPattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
       const dateOnlyMatch = dateString.match(dateOnlyPattern);
 
