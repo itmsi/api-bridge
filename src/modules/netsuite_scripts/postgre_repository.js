@@ -3,13 +3,26 @@ const db = require('../../config/database');
 const TABLE_NAME = 'netsuite_scripts';
 
 /**
- * Get script configuration by module and operation
+ * Get script configuration by module and operation (legacy - untuk backward compatibility)
  */
 const getScriptConfig = async (module, operation) => {
   return await db(TABLE_NAME)
     .where({ 
       module, 
       operation, 
+      is_active: true 
+    })
+    .first();
+};
+
+/**
+ * Get script configuration by module only (per module, bukan per operation)
+ * Mengambil script ID pertama yang aktif untuk module tersebut
+ */
+const getScriptConfigByModule = async (module) => {
+  return await db(TABLE_NAME)
+    .where({ 
+      module, 
       is_active: true 
     })
     .first();
@@ -98,6 +111,7 @@ const deleteScriptConfig = async (module, operation) => {
 
 module.exports = {
   getScriptConfig,
+  getScriptConfigByModule,
   getScriptsByModule,
   getAllScripts,
   upsertScriptConfig,

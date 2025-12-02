@@ -11,6 +11,10 @@ const getKeyPattern = (key) => {
     if (key.includes(':list:')) return 'customer:list';
     if (key.match(/^customer:[^:]+$/)) return 'customer:single';
   }
+  if (key.startsWith('vendor:')) {
+    if (key.includes(':list:')) return 'vendor:list';
+    if (key.match(/^vendor:[^:]+$/)) return 'vendor:single';
+  }
   if (key.startsWith('sync:')) return 'sync:tracker';
   return 'other';
 };
@@ -127,6 +131,8 @@ const deleteCacheByPattern = async (pattern) => {
 const CACHE_KEYS = {
   CUSTOMER: (netsuiteId) => `customer:${netsuiteId}`,
   CUSTOMER_LIST: (paramsHash) => `customer:list:page:${paramsHash}`,
+  VENDOR: (netsuiteId) => `vendor:${netsuiteId}`,
+  VENDOR_LIST: (paramsHash) => `vendor:list:page:${paramsHash}`,
   SYNC_LAST_SYNC: (module) => `sync:lastSync:${module}`,
 };
 
@@ -136,6 +142,8 @@ const CACHE_KEYS = {
 const CACHE_TTL = {
   CUSTOMER: 12 * 60 * 60, // 12 hours
   CUSTOMER_LIST: 5 * 60, // 5 minutes
+  VENDOR: 12 * 60 * 60, // 12 hours
+  VENDOR_LIST: 5 * 60, // 5 minutes
   SYNC_LAST_SYNC: null, // no expiration
 };
 

@@ -1,5 +1,5 @@
 const { getNetSuiteClient } = require('./client');
-const { logger } = require('../../utils/logger');
+const { Logger } = require('../../utils/logger');
 const { getScriptConfig } = require('../../config/netsuite');
 
 /**
@@ -17,10 +17,10 @@ class NetSuiteCustomerService {
    */
   async getCustomer(customerId) {
     try {
-      logger().info(`Fetching customer from NetSuite: ${customerId}`);
+      Logger.info(`Fetching customer from NetSuite: ${customerId}`);
 
-      // Get script config from database
-      const scriptConfig = await getScriptConfig('customer', 'read');
+      // Get script config from database (per module, bukan per operation)
+      const scriptConfig = await getScriptConfig('customer');
       const response = await this.client.get({
         customerId,
         operation: 'read',
@@ -34,7 +34,7 @@ class NetSuiteCustomerService {
 
       return null;
     } catch (error) {
-      logger().error(`Error fetching customer ${customerId} from NetSuite:`, error);
+      Logger.error(`Error fetching customer ${customerId} from NetSuite:`, error);
       throw error;
     }
   }
@@ -60,7 +60,7 @@ class NetSuiteCustomerService {
       const finalPageIndex = pageIndex !== null ? pageIndex : (page !== null ? page - 1 : 0);
       const finalLastModified = lastmodified || since;
 
-      logger().info('Fetching customers page from NetSuite', { 
+      Logger.info('Fetching customers page from NetSuite', { 
         pageIndex: finalPageIndex, 
         pageSize, 
         lastmodified: finalLastModified, 
@@ -74,8 +74,8 @@ class NetSuiteCustomerService {
         ...(finalLastModified && { lastmodified: finalLastModified }),
       };
 
-      // Get script config from database
-      const scriptConfig = await getScriptConfig('customer', 'getPage');
+      // Get script config from database (per module, bukan per operation)
+      const scriptConfig = await getScriptConfig('customer');
       const response = await this.client.post(requestBody, {
         script: scriptConfig.script_id,
         deploy: scriptConfig.deployment_id,
@@ -95,7 +95,7 @@ class NetSuiteCustomerService {
         totalPages: 0,
       };
     } catch (error) {
-      logger().error('Error fetching customers page from NetSuite:', error);
+      Logger.error('Error fetching customers page from NetSuite:', error);
       throw error;
     }
   }
@@ -106,12 +106,12 @@ class NetSuiteCustomerService {
    */
   async createCustomer(customerData) {
     try {
-      logger().info('Creating customer in NetSuite', { companyname: customerData.companyname });
+      Logger.info('Creating customer in NetSuite', { companyname: customerData.companyname });
 
       const requestBody = this.transformCustomerToNetSuiteFormat(customerData, 'create');
 
-      // Get script config from database
-      const scriptConfig = await getScriptConfig('customer', 'create');
+      // Get script config from database (per module, bukan per operation)
+      const scriptConfig = await getScriptConfig('customer');
       const response = await this.client.post(requestBody, {
         operation: 'create',
         script: scriptConfig.script_id,
@@ -124,7 +124,7 @@ class NetSuiteCustomerService {
 
       throw new Error('Failed to create customer in NetSuite');
     } catch (error) {
-      logger().error('Error creating customer in NetSuite:', error);
+      Logger.error('Error creating customer in NetSuite:', error);
       throw error;
     }
   }
@@ -135,12 +135,12 @@ class NetSuiteCustomerService {
    */
   async updateCustomer(internalId, customerData) {
     try {
-      logger().info(`Updating customer in NetSuite: ${internalId}`);
+      Logger.info(`Updating customer in NetSuite: ${internalId}`);
 
       const requestBody = this.transformCustomerToNetSuiteFormat(customerData, 'update', internalId);
 
-      // Get script config from database
-      const scriptConfig = await getScriptConfig('customer', 'update');
+      // Get script config from database (per module, bukan per operation)
+      const scriptConfig = await getScriptConfig('customer');
       const response = await this.client.post(requestBody, {
         operation: 'update',
         script: scriptConfig.script_id,
@@ -153,7 +153,7 @@ class NetSuiteCustomerService {
 
       throw new Error(`Failed to update customer ${internalId} in NetSuite`);
     } catch (error) {
-      logger().error(`Error updating customer ${internalId} in NetSuite:`, error);
+      Logger.error(`Error updating customer ${internalId} in NetSuite:`, error);
       throw error;
     }
   }
@@ -174,7 +174,7 @@ class NetSuiteCustomerService {
         netsuite_id = null,
       } = params;
 
-      logger().info('Searching customers in NetSuite', { 
+      Logger.info('Searching customers in NetSuite', { 
         lastmodified: lastmodified || since, 
         pageIndex: pageIndex !== null ? pageIndex : (page !== null ? page - 1 : 0), 
         pageSize, 
@@ -216,7 +216,7 @@ class NetSuiteCustomerService {
         lastmodified: finalLastModified 
       });
     } catch (error) {
-      logger().error('Error searching customers in NetSuite:', error);
+      Logger.error('Error searching customers in NetSuite:', error);
       throw error;
     }
   }
@@ -276,7 +276,7 @@ class NetSuiteCustomerService {
 
       return null;
     } catch (error) {
-      logger().warn(`Failed to parse date: ${dateString}`, error);
+      Logger.warn(`Failed to parse date: ${dateString}`, error);
       return null;
     }
   }

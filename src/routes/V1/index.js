@@ -22,6 +22,10 @@ routing.use(`${API_TAG}/examples`, exampleModule)
 const customerModule = require('../../modules/customer')
 routing.use(`${API_TAG}/customers`, customerModule)
 
+// Vendor Module
+const vendorModule = require('../../modules/vendor')
+routing.use(`${API_TAG}/vendors`, vendorModule)
+
 // Sync Module (Admin)
 const syncModule = require('../../modules/sync')
 routing.use(`${API_TAG}/admin/sync`, syncModule)

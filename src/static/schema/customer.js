@@ -9,60 +9,35 @@ const customerSchemas = {
       id: {
         type: 'integer',
         description: 'Customer ID',
-        example: 1
-      },
-      netsuite_id: {
-        type: 'string',
-        description: 'NetSuite Customer ID',
-        example: '123'
+        example: 50
       },
       name: {
         type: 'string',
         description: 'Customer name',
-        example: 'PT ABC'
+        example: 'KH1020019 - PT. OSEAN KONSTRUKSI ENERGI'
       },
       email: {
         type: 'string',
         nullable: true,
         format: 'email',
         description: 'Customer email',
-        example: 'abc@example.com'
+        example: ''
       },
       phone: {
         type: 'string',
         nullable: true,
         description: 'Customer phone',
-        example: '62128214884'
+        example: ''
       },
-      data: {
-        type: 'object',
-        nullable: true,
-        description: 'Raw NetSuite data (JSON)',
-        additionalProperties: true
-      },
-      last_modified_netsuite: {
+      entityId: {
         type: 'string',
-        format: 'date-time',
-        nullable: true,
-        description: 'Last modified date from NetSuite',
-        example: '2025-01-02T10:00:00.000Z'
+        description: 'Entity ID from NetSuite',
+        example: 'KH1020019 - PT. OSEAN KONSTRUKSI ENERGI'
       },
-      created_at: {
+      companyName: {
         type: 'string',
-        format: 'date-time',
-        description: 'Creation timestamp',
-        example: '2025-01-01T00:00:00.000Z'
-      },
-      updated_at: {
-        type: 'string',
-        format: 'date-time',
-        description: 'Last update timestamp',
-        example: '2025-01-02T10:00:00.000Z'
-      },
-      is_deleted: {
-        type: 'boolean',
-        description: 'Soft delete flag',
-        example: false
+        description: 'Company name from NetSuite',
+        example: 'KH1020019 - PT. OSEAN KONSTRUKSI ENERGI'
       }
     }
   },

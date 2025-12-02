@@ -68,21 +68,22 @@ const getRestletUrl = () => {
 
 /**
  * Get script configuration from database dengan caching
+ * Sekarang menggunakan script ID per module (bukan per operation)
  * @param {string} module - Module name (e.g., 'customer', 'order')
- * @param {string} operation - Operation name (e.g., 'read', 'create', 'getPage')
+ * @param {string} operation - Operation name (optional, untuk backward compatibility)
  * @returns {Promise<{script_id: string, deployment_id: string}|null>}
  */
-const getScriptConfig = async (module, operation) => {
+const getScriptConfig = async (module, operation = null) => {
   try {
-    // Check cache first
-    const cacheKey = `netsuite:script:${module}:${operation}`;
+    // Check cache first - cache key hanya berdasarkan module sekarang
+    const cacheKey = `netsuite:script:${module}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       return cached;
     }
 
-    // Get from database
-    const config = await netsuiteScriptsRepo.getScriptConfig(module, operation);
+    // Get from database - ambil script ID per module (bukan per operation)
+    const config = await netsuiteScriptsRepo.getScriptConfigByModule(module);
     
     if (config) {
       const result = {
@@ -103,7 +104,7 @@ const getScriptConfig = async (module, operation) => {
     };
   } catch (error) {
     // If database error, fallback to default
-    console.warn(`Error getting script config from DB for ${module}:${operation}, using default:`, error.message);
+    console.warn(`Error getting script config from DB for ${module}, using default:`, error.message);
     return {
       script_id: NETSUITE_CONFIG.scriptId,
       deployment_id: NETSUITE_CONFIG.deploymentId,
@@ -114,10 +115,10 @@ const getScriptConfig = async (module, operation) => {
 /**
  * Get Restlet endpoint URL dengan script config dari database
  * @param {string} module - Module name
- * @param {string} operation - Operation name
+ * @param {string} operation - Operation name (optional, untuk backward compatibility)
  * @returns {Promise<string>}
  */
-const getRestletUrlWithConfig = async (module, operation) => {
+const getRestletUrlWithConfig = async (module, operation = null) => {
   const config = await getScriptConfig(module, operation);
   return `${NETSUITE_CONFIG.baseUrl}/app/site/hosting/restlet.nl?script=${config.script_id}&deploy=${config.deployment_id}`;
 };

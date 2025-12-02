@@ -6,6 +6,7 @@
 const { getOAuthService } = require('./oauth');
 const { getNetSuiteClient } = require('./client');
 const { getNetSuiteCustomerService } = require('./customer-service');
+const { getNetSuiteVendorService } = require('./vendor-service');
 
 module.exports = {
   // OAuth Service
@@ -16,5 +17,8 @@ module.exports = {
   
   // Customer Service
   getNetSuiteCustomerService,
+  
+  // Vendor Service
+  getNetSuiteVendorService,
 };
 

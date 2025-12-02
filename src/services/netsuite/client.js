@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { logger } = require('../../utils/logger');
+const { Logger } = require('../../utils/logger');
 const { NETSUITE_CONFIG, validateConfig, getRestletUrl } = require('../../config/netsuite');
 const { getOAuthService } = require('./oauth');
 const { metrics } = require('../../config/prometheus');
@@ -86,7 +86,7 @@ class NetSuiteClient {
         status: response.status >= 200 && response.status < 300 ? 'success' : 'error',
       });
 
-      logger().info(`NetSuite API ${method} request successful`, {
+      Logger.info(`NetSuite API ${method} request successful`, {
         url: url.toString(),
         status: response.status,
         duration,
@@ -105,7 +105,7 @@ class NetSuiteClient {
         status: 'error',
       });
 
-      logger().error('NetSuite API request failed', {
+      Logger.error('NetSuite API request failed', {
         method,
         url: this.restletUrl,
         error: error.message,

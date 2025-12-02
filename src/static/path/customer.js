@@ -8,7 +8,7 @@ const customerPaths = {
       tags: ['Customers'],
       summary: 'Get all customers',
       security: [{ ApiKeyAuth: [], ApiSecretAuth: [] }],
-      description: 'Retrieve all customers with pagination, filtering, and on-demand incremental sync. Sistem akan secara otomatis: 1) Hit ke API NetSuite untuk cek lastupdate all data, 2) Cek data lastupdate yang ada di DB internal, 3) Sync data yang lebih besar dari lastupdate-nya jika diperlukan. Returns cached data if available, triggers incremental sync if data is stale or newer data exists in NetSuite.',
+      description: 'Retrieve all customers with pagination, filtering, and on-demand incremental sync. Sistem akan secara otomatis: 1) Hit ke API NetSuite untuk mendapatkan data terbaru, 2) Bandingkan lastModifiedDate dari NetSuite dengan max(last_modified_netsuite) di DB, 3) Sync (insert/update) data yang lebih baru ke DB, 4) Skip jika tidak ada data yang lebih baru. Returns cached data if available, automatically syncs newer data from NetSuite if found.',
       requestBody: {
         required: false,
         content: {
@@ -26,7 +26,7 @@ const customerPaths = {
       },
       responses: {
         200: {
-          description: 'Success - Returns customer list. May trigger incremental sync in background if data is stale or newer data exists in NetSuite.',
+          description: 'Success - Returns customer list. Automatically syncs newer data from NetSuite if found during the request.',
           headers: {
             'X-Sync-Triggered': {
               description: 'Indicates if an incremental sync job was triggered',
@@ -48,6 +48,13 @@ const customerPaths = {
               schema: {
                 type: 'string',
                 example: 'NetSuite has newer data (NetSuite: 2025-12-01T10:00:00.000Z, DB: 2025-11-30T10:00:00.000Z)'
+              }
+            },
+            'X-Synced-Count': {
+              description: 'Number of customers synced from NetSuite',
+              schema: {
+                type: 'string',
+                example: '3'
               }
             }
           },

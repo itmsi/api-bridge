@@ -1,10 +1,10 @@
 const db = require('../../config/database');
 const { pgCore } = require('../../config/database');
 
-const TABLE_NAME = 'customers';
+const TABLE_NAME = 'vendors';
 
 /**
- * Find all customers with pagination dan filtering
+ * Find all vendors with pagination dan filtering
  */
 const findAll = async (filters = {}, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
@@ -61,7 +61,7 @@ const findAll = async (filters = {}, page = 1, limit = 10) => {
 };
 
 /**
- * Find customer by ID
+ * Find vendor by ID
  */
 const findById = async (id) => {
   return await db(TABLE_NAME)
@@ -70,7 +70,7 @@ const findById = async (id) => {
 };
 
 /**
- * Find customer by NetSuite ID
+ * Find vendor by NetSuite ID
  */
 const findByNetSuiteId = async (netsuiteId) => {
   return await db(TABLE_NAME)
@@ -79,12 +79,12 @@ const findByNetSuiteId = async (netsuiteId) => {
 };
 
 /**
- * Upsert customer (insert atau update berdasarkan netsuite_id)
+ * Upsert vendor (insert atau update berdasarkan netsuite_id)
  * Hanya update jika last_modified_netsuite lebih baru
- * @param {Object} customerData - Customer data
+ * @param {Object} vendorData - Vendor data
  * @param {Object} trx - Optional transaction object
  */
-const upsert = async (customerData, trx = null) => {
+const upsert = async (vendorData, trx = null) => {
   const {
     netsuite_id,
     name,
@@ -92,12 +92,12 @@ const upsert = async (customerData, trx = null) => {
     phone,
     data,
     last_modified_netsuite,
-  } = customerData;
+  } = vendorData;
 
   // Use transaction if provided, otherwise use regular db
   const queryBuilder = trx ? trx(TABLE_NAME) : db(TABLE_NAME);
 
-  // Check existing customer
+  // Check existing vendor
   const existing = await queryBuilder
     .where({ netsuite_id })
     .first();
@@ -118,7 +118,7 @@ const upsert = async (customerData, trx = null) => {
       return existing;
     }
 
-    // Update customer
+    // Update vendor
     const updateQuery = trx 
       ? trx(TABLE_NAME).where({ netsuite_id })
       : db(TABLE_NAME).where({ netsuite_id });
@@ -136,7 +136,7 @@ const upsert = async (customerData, trx = null) => {
 
     return updated;
   } else {
-    // Insert new customer
+    // Insert new vendor
     const insertQuery = trx 
       ? trx(TABLE_NAME)
       : db(TABLE_NAME);
@@ -159,15 +159,15 @@ const upsert = async (customerData, trx = null) => {
 };
 
 /**
- * Batch upsert customers
+ * Batch upsert vendors
  */
-const batchUpsert = async (customers) => {
+const batchUpsert = async (vendors) => {
   const results = [];
   
   // Use transaction untuk atomic operation
   return await pgCore.transaction(async (trx) => {
-    for (const customer of customers) {
-      const result = await upsert(customer, trx);
+    for (const vendor of vendors) {
+      const result = await upsert(vendor, trx);
       results.push(result);
     }
     return results;
@@ -175,19 +175,19 @@ const batchUpsert = async (customers) => {
 };
 
 /**
- * Get last modified timestamp untuk customer tertentu
+ * Get last modified timestamp untuk vendor tertentu
  */
 const getLastModified = async (netsuiteId) => {
-  const customer = await db(TABLE_NAME)
+  const vendor = await db(TABLE_NAME)
     .select('last_modified_netsuite')
     .where({ netsuite_id: netsuiteId, is_deleted: false })
     .first();
   
-  return customer ? customer.last_modified_netsuite : null;
+  return vendor ? vendor.last_modified_netsuite : null;
 };
 
 /**
- * Get maximum last_modified_netsuite untuk semua customers
+ * Get maximum last_modified_netsuite untuk semua vendors
  */
 const getMaxLastModified = async () => {
   const result = await db(TABLE_NAME)

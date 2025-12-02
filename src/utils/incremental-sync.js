@@ -34,7 +34,9 @@ const getMaxLastModifiedFromNetSuite = async (netSuiteService, maxPages = 3, pag
     }
 
     while (hasMore && currentPage <= maxPages) {
-      const response = await fetchMethod({ page: currentPage, pageSize });
+      // Use pageIndex (0-based) for consistency with new format
+      const pageIndex = currentPage - 1;
+      const response = await fetchMethod({ pageIndex, pageSize });
 
       if (!response || !response.items || response.items.length === 0) {
         hasMore = false;

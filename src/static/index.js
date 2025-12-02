@@ -25,12 +25,14 @@ const servers = [
 // Import schemas
 const commonSchema = require('./schema/common');
 const customerSchema = require('./schema/customer');
+const vendorSchema = require('./schema/vendor');
 const syncSchema = require('./schema/sync');
 const apiClientSchema = require('./schema/api_client');
 const netsuiteScriptsSchema = require('./schema/netsuite_scripts');
 
 // Import paths
 const customerPaths = require('./path/customer');
+const vendorPaths = require('./path/vendor');
 const syncPaths = require('./path/sync');
 const apiClientPaths = require('./path/api_client');
 const netsuiteScriptsPaths = require('./path/netsuite_scripts');
@@ -39,6 +41,7 @@ const netsuiteScriptsPaths = require('./path/netsuite_scripts');
 const schemas = {
   ...commonSchema,
   ...customerSchema,
+  ...vendorSchema,
   ...syncSchema,
   ...apiClientSchema,
   ...netsuiteScriptsSchema,
@@ -48,6 +51,7 @@ const schemas = {
 const paths = {
   // ...examplePaths,
   ...customerPaths,
+  ...vendorPaths,
   ...syncPaths,
   ...apiClientPaths,
   ...netsuiteScriptsPaths,
