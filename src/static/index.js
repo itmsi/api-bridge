@@ -13,12 +13,12 @@ const info = {
 
 const servers = [
   {
-    url: '/api',
+    url: '/api/v1/bridge',
     description: 'Development server'
   },
   {
-    url: 'https://your-production-url.com/api',
-    description: 'Production server'
+    url: 'https://services.motorsights.com/api/v1/bridge',
+    description: 'Gateway server'
   }
 ]
 
