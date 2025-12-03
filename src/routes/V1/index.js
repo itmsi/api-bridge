@@ -34,6 +34,10 @@ routing.use(`${API_TAG}/admin/sync`, syncModule)
 const apiClientModule = require('../../modules/api_client')
 routing.use(`${API_TAG}/admin/api-clients`, apiClientModule)
 
+// Auth Module (OAuth2)
+const authModule = require('../../modules/auth')
+routing.use(`${API_TAG}/auth`, authModule)
+
 // Tambahkan routes module Anda di sini
 // Example:
 // const yourModule = require('../../modules/yourModule')

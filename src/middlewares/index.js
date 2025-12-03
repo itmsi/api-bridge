@@ -4,6 +4,7 @@ const validation = require('./validation')
 const recaptcha = require('./recaptcha')
 const rateLimiterMiddleware = require('./rate-limiter')
 const apiKey = require('./api-key')
+const oauth2 = require('./oauth2')
 
 const verifyTokenMember = async (req, res, next) => {
   try {
@@ -39,5 +40,6 @@ module.exports = {
   ...recaptcha,
   ...rateLimiterMiddleware,
   ...apiKey,
+  ...oauth2,
   verifyTokenMember
 }

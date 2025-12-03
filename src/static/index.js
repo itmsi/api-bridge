@@ -29,6 +29,7 @@ const vendorSchema = require('./schema/vendor');
 const syncSchema = require('./schema/sync');
 const apiClientSchema = require('./schema/api_client');
 const netsuiteScriptsSchema = require('./schema/netsuite_scripts');
+const authSchema = require('./schema/auth');
 
 // Import paths
 const customerPaths = require('./path/customer');
@@ -36,6 +37,7 @@ const vendorPaths = require('./path/vendor');
 const syncPaths = require('./path/sync');
 const apiClientPaths = require('./path/api_client');
 const netsuiteScriptsPaths = require('./path/netsuite_scripts');
+const authPaths = require('./path/auth');
 
 // Combine all schemas
 const schemas = {
@@ -45,11 +47,13 @@ const schemas = {
   ...syncSchema,
   ...apiClientSchema,
   ...netsuiteScriptsSchema,
+  ...authSchema,
 };
 
 // Combine all paths
 const paths = {
   // ...examplePaths,
+  ...authPaths,
   ...customerPaths,
   ...vendorPaths,
   // ...syncPaths,
@@ -79,7 +83,13 @@ const index = {
       bearerAuth: {
         type: 'http',
         scheme: 'bearer',
-        bearerFormat: 'JWT'
+        bearerFormat: 'JWT',
+        description: 'OAuth2 Access Token (JWT). Dapatkan token dari endpoint /auth/token menggunakan client_credentials grant. Format: Bearer <token>'
+      },
+      BasicAuth: {
+        type: 'http',
+        scheme: 'basic',
+        description: 'Basic Authentication untuk OAuth2 token endpoint. Format: Basic base64(client_id:client_secret)'
       }
     },
     schemas
