@@ -37,12 +37,12 @@ const findByToken = async (refreshToken) => {
 };
 
 /**
- * Find refresh token by jti
+ * Find refresh token by jti (including revoked tokens)
+ * Used to check if access token should be invalidated
  */
 const findByJti = async (jti) => {
   return await db(TABLE_NAME)
     .where({ jti })
-    .where('is_revoked', false)
     .first();
 };
 

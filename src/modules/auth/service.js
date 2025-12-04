@@ -155,11 +155,20 @@ const verifyAccessToken = async (accessToken) => {
       return { valid: false, error: 'Client is inactive or not found' };
     }
     
-    // Check if refresh token for this jti is revoked
+    // Check if refresh token for this jti exists and is not revoked
+    // If refresh token is revoked, it means user did refresh token, so old access token should be invalid
     const refreshTokenRecord = await repository.findByJti(decoded.jti);
     
-    if (refreshTokenRecord && refreshTokenRecord.is_revoked) {
-      return { valid: false, error: 'Token has been revoked' };
+    if (!refreshTokenRecord) {
+      // JTI tidak ditemukan - mungkin token sudah sangat lama atau invalid
+      // Untuk security, kita anggap invalid
+      return { valid: false, error: 'Token JTI not found - token may have been rotated' };
+    }
+    
+    if (refreshTokenRecord.is_revoked) {
+      // Refresh token sudah di-revoke (karena sudah di-refresh)
+      // Access token dengan JTI yang sama juga harus di-invalidate untuk security
+      return { valid: false, error: 'Token has been revoked (refresh token was used)' };
     }
     
     return { valid: true, decoded, client };

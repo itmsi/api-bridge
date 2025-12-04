@@ -34,6 +34,10 @@ routing.use(`${API_TAG}/admin/sync`, syncModule)
 const apiClientModule = require('../../modules/api_client')
 routing.use(`${API_TAG}/admin/api-clients`, apiClientModule)
 
+// NetSuite Scripts Module (Admin)
+const netsuiteScriptsModule = require('../../modules/netsuite_scripts')
+routing.use(`${API_TAG}/admin/netsuite-scripts`, netsuiteScriptsModule)
+
 // Auth Module (OAuth2)
 const authModule = require('../../modules/auth')
 routing.use(`${API_TAG}/auth`, authModule)

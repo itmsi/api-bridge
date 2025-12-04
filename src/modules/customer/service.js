@@ -48,35 +48,57 @@ const syncCustomersFromNetSuite = async (dbMaxDate) => {
   let allItemsToSync = [];
   let shouldContinueSync = false;
   
+  // Jika DB kosong (dbMaxDate null), kita harus sync semua data
+  const isDbEmpty = !dbMaxDate;
+  
   try {
     Logger.info(`[CUSTOMERS/SERVICE] Hitting NetSuite API (page pertama untuk cek)...`, { 
       pageIndex: 0, 
       pageSize: syncPageSize, 
-      lastmodified: dbMaxDate 
+      lastmodified: dbMaxDate || 'null (DB kosong - akan sync semua data)',
+      isDbEmpty
     });
     
-    const firstPageResponse = await netSuiteService.getCustomersPage({
+    // Jika DB kosong, jangan pass lastmodified parameter agar NetSuite return semua data
+    const requestParams = {
       pageIndex: 0,
       pageSize: syncPageSize,
-      lastmodified: dbMaxDate,
-    });
+    };
+    
+    // Hanya pass lastmodified jika DB tidak kosong
+    if (!isDbEmpty) {
+      requestParams.lastmodified = dbMaxDate;
+    }
+    
+    const firstPageResponse = await netSuiteService.getCustomersPage(requestParams);
     
     Logger.info(`[CUSTOMERS/SERVICE] NetSuite response received: ${firstPageResponse?.items?.length || 0} items`);
     
     if (firstPageResponse && firstPageResponse.items && firstPageResponse.items.length > 0) {
-      const firstItem = firstPageResponse.items[0];
-      const firstItemModifiedDate = firstItem.last_modified_netsuite ? new Date(firstItem.last_modified_netsuite) : null;
-      const dbMaxModifiedDate = dbMaxDate ? new Date(dbMaxDate) : null;
-      
-      if (!dbMaxModifiedDate || (firstItemModifiedDate && firstItemModifiedDate >= dbMaxModifiedDate)) {
+      // Jika DB kosong, langsung sync semua data yang diterima
+      if (isDbEmpty) {
         allItemsToSync.push(...firstPageResponse.items);
-        Logger.info(`[CUSTOMERS/SERVICE] Ada data baru! ${firstPageResponse.items.length} item(s) dari halaman pertama akan di-sync`);
+        Logger.info(`[CUSTOMERS/SERVICE] DB kosong - Ada data dari NetSuite! ${firstPageResponse.items.length} item(s) dari halaman pertama akan di-sync`);
         shouldContinueSync = firstPageResponse.hasMore || false;
       } else {
-        Logger.info(`[CUSTOMERS/SERVICE] Tidak ada data baru, skip sync`);
-        shouldContinueSync = false;
+        // DB tidak kosong, cek apakah ada data baru
+        const firstItem = firstPageResponse.items[0];
+        const firstItemModifiedDate = firstItem.last_modified_netsuite ? new Date(firstItem.last_modified_netsuite) : null;
+        const dbMaxModifiedDate = dbMaxDate ? new Date(dbMaxDate) : null;
+        
+        if (!dbMaxModifiedDate || (firstItemModifiedDate && firstItemModifiedDate >= dbMaxModifiedDate)) {
+          allItemsToSync.push(...firstPageResponse.items);
+          Logger.info(`[CUSTOMERS/SERVICE] Ada data baru! ${firstPageResponse.items.length} item(s) dari halaman pertama akan di-sync`);
+          shouldContinueSync = firstPageResponse.hasMore || false;
+        } else {
+          Logger.info(`[CUSTOMERS/SERVICE] Tidak ada data baru, skip sync`);
+          shouldContinueSync = false;
+        }
       }
     } else {
+      if (isDbEmpty) {
+        Logger.info(`[CUSTOMERS/SERVICE] DB kosong tapi NetSuite tidak mengembalikan data`);
+      }
       shouldContinueSync = false;
     }
   } catch (firstPageError) {
@@ -94,14 +116,21 @@ const syncCustomersFromNetSuite = async (dbMaxDate) => {
       Logger.info(`[CUSTOMERS/SERVICE] Hitting NetSuite API...`, { 
         pageIndex: currentPageIndex, 
         pageSize: syncPageSize, 
-        lastmodified: dbMaxDate 
+        lastmodified: isDbEmpty ? 'null (DB kosong)' : dbMaxDate 
       });
       
-      const netSuiteResponse = await netSuiteService.getCustomersPage({
+      // Jika DB kosong, jangan pass lastmodified parameter
+      const requestParams = {
         pageIndex: currentPageIndex,
         pageSize: syncPageSize,
-        lastmodified: dbMaxDate,
-      });
+      };
+      
+      // Hanya pass lastmodified jika DB tidak kosong
+      if (!isDbEmpty) {
+        requestParams.lastmodified = dbMaxDate;
+      }
+      
+      const netSuiteResponse = await netSuiteService.getCustomersPage(requestParams);
       
       Logger.info(`[CUSTOMERS/SERVICE] NetSuite response received: ${netSuiteResponse?.items?.length || 0} items`);
       
