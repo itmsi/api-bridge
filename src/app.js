@@ -20,6 +20,7 @@ const apiV1 = require('./routes/V1')
 const { initListener } = require('./listeners')
 const { prometheusMiddleware } = require('./middlewares/prometheus')
 const { connectRedis } = require('./config/redis')
+const { environmentMiddleware } = require('./middlewares/environment')
 
 // Initialize Redis connection
 if (process.env.REDIS_ENABLED === 'true') {
@@ -55,6 +56,9 @@ if (process.env.NODE_ENV === 'production') {
 
 // Prometheus monitoring middleware
 app.use(prometheusMiddleware)
+
+// Environment middleware - harus dipanggil sebelum routes
+app.use(environmentMiddleware)
 
 app.use(healthCheck) // routing
 app.use(apiV1) // routing

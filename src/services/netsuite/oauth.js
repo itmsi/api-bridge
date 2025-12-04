@@ -1,19 +1,24 @@
 const OAuth = require('oauth-1.0a');
 const crypto = require('crypto');
-const { NETSUITE_CONFIG } = require('../../config/netsuite');
+const { getNetSuiteConfig } = require('../../config/netsuite');
+const { getCurrentEnvironment } = require('../../utils/environment');
 
 /**
  * OAuth 1.0 Service untuk NetSuite API
  * Mengimplementasikan HMAC-SHA256 signature sesuai dengan Postman collection
+ * Support multiple environments: sandbox dan production
  */
 class NetSuiteOAuthService {
-  constructor() {
+  constructor(env = null) {
+    this.environment = env || getCurrentEnvironment();
+    this.config = getNetSuiteConfig(this.environment);
+    
     this.oauth = OAuth({
       consumer: {
-        key: NETSUITE_CONFIG.oauth.consumerKey,
-        secret: NETSUITE_CONFIG.oauth.consumerSecret,
+        key: this.config.oauth.consumerKey,
+        secret: this.config.oauth.consumerSecret,
       },
-      signature_method: NETSUITE_CONFIG.oauth.signatureMethod,
+      signature_method: this.config.oauth.signatureMethod,
       hash_function(baseString, key) {
         return crypto
           .createHmac('sha256', key)
@@ -29,8 +34,8 @@ class NetSuiteOAuthService {
    */
   getAuthorizationHeader(url, method) {
     const token = {
-      key: NETSUITE_CONFIG.oauth.token,
-      secret: NETSUITE_CONFIG.oauth.tokenSecret,
+      key: this.config.oauth.token,
+      secret: this.config.oauth.tokenSecret,
     };
 
     // Parse URL untuk mendapatkan base URL dan query params
@@ -56,7 +61,7 @@ class NetSuiteOAuthService {
     const authData = this.oauth.authorize(requestData, token);
 
     // Build Authorization header dengan realm
-    const realm = NETSUITE_CONFIG.oauth.realm;
+    const realm = this.config.oauth.realm;
     const params = [];
 
     params.push(`realm="${realm}"`);
@@ -65,7 +70,7 @@ class NetSuiteOAuthService {
     params.push(`oauth_signature_method="${authData.oauth_signature_method}"`);
     params.push(`oauth_timestamp="${authData.oauth_timestamp}"`);
     params.push(`oauth_nonce="${authData.oauth_nonce}"`);
-    params.push(`oauth_version="${NETSUITE_CONFIG.oauth.version}"`);
+    params.push(`oauth_version="${this.config.oauth.version}"`);
     params.push(`oauth_signature="${encodeURIComponent(authData.oauth_signature)}"`);
 
     return `OAuth ${params.join(', ')}`;
@@ -75,29 +80,37 @@ class NetSuiteOAuthService {
    * Validate OAuth credentials
    */
   validateCredentials() {
-    if (!NETSUITE_CONFIG.oauth.consumerKey || !NETSUITE_CONFIG.oauth.consumerSecret) {
-      return { valid: false, error: 'Consumer credentials are missing' };
+    if (!this.config.oauth.consumerKey || !this.config.oauth.consumerSecret) {
+      return { valid: false, error: `Consumer credentials are missing for ${this.environment}` };
     }
 
-    if (!NETSUITE_CONFIG.oauth.token || !NETSUITE_CONFIG.oauth.tokenSecret) {
-      return { valid: false, error: 'Token credentials are missing' };
+    if (!this.config.oauth.token || !this.config.oauth.tokenSecret) {
+      return { valid: false, error: `Token credentials are missing for ${this.environment}` };
     }
 
     return { valid: true };
   }
 }
 
-// Singleton instance
-let oauthServiceInstance = null;
+// Singleton instances per environment
+const oauthServiceInstances = {
+  sandbox: null,
+  production: null,
+};
 
 /**
- * Get OAuth service instance
+ * Get OAuth service instance untuk environment tertentu
+ * @param {string} env - Environment name (optional, defaults to current environment)
+ * @returns {NetSuiteOAuthService} OAuth service instance
  */
-const getOAuthService = () => {
-  if (!oauthServiceInstance) {
-    oauthServiceInstance = new NetSuiteOAuthService();
+const getOAuthService = (env = null) => {
+  const environment = env || getCurrentEnvironment();
+  
+  if (!oauthServiceInstances[environment]) {
+    oauthServiceInstances[environment] = new NetSuiteOAuthService(environment);
   }
-  return oauthServiceInstance;
+  
+  return oauthServiceInstances[environment];
 };
 
 module.exports = {

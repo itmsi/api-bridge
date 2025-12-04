@@ -11,6 +11,14 @@ HOST=localhost
 APP_BASE_URL=http://localhost:3000
 
 # ===========================================
+# Multi-Environment Port Configuration
+# ===========================================
+# Port untuk NetSuite Sandbox
+APP_PORT_SANDBOX=3000
+# Port untuk NetSuite Production
+APP_PORT_PRODUCTION=3001
+
+# ===========================================
 # Database Configuration
 # ===========================================
 DB_CLIENT_DEV=pg
@@ -37,6 +45,25 @@ DB_PORT_TEST=5432
 DB_USER_TEST=postgres
 DB_PASS_TEST=your_password
 DB_NAME_TEST=your_database_test
+
+# ===========================================
+# Database Configuration per Environment
+# ===========================================
+# Database untuk NetSuite Sandbox
+DB_CLIENT_SANDBOX=pg
+DB_HOST_SANDBOX=localhost
+DB_PORT_SANDBOX=5432
+DB_USER_SANDBOX=postgres
+DB_PASS_SANDBOX=your_password_sandbox
+DB_NAME_SANDBOX=your_database_sandbox
+
+# Database untuk NetSuite Production
+DB_CLIENT_PRODUCTION=pg
+DB_HOST_PRODUCTION=localhost
+DB_PORT_PRODUCTION=5432
+DB_USER_PRODUCTION=postgres
+DB_PASS_PRODUCTION=your_password_production
+DB_NAME_PRODUCTION=your_database_production
 
 # ===========================================
 # JWT Configuration
@@ -198,6 +225,34 @@ NETSUITE_TOKEN=your_token
 NETSUITE_TOKEN_SECRET=your_token_secret
 NETSUITE_REALM=11970733_SB1
 NETSUITE_TIMEOUT=30000
+
+# ===========================================
+# NetSuite Sandbox Configuration
+# ===========================================
+NETSUITE_SANDBOX_ENABLED=true
+NETSUITE_SANDBOX_BASE_URL=https://11970733-sb1.restlets.api.netsuite.com
+NETSUITE_SANDBOX_SCRIPT_ID=472
+NETSUITE_SANDBOX_DEPLOYMENT_ID=1
+NETSUITE_SANDBOX_CONSUMER_KEY=your_sandbox_consumer_key
+NETSUITE_SANDBOX_CONSUMER_SECRET=your_sandbox_consumer_secret
+NETSUITE_SANDBOX_TOKEN=your_sandbox_token
+NETSUITE_SANDBOX_TOKEN_SECRET=your_sandbox_token_secret
+NETSUITE_SANDBOX_REALM=11970733_SB1
+NETSUITE_SANDBOX_TIMEOUT=30000
+
+# ===========================================
+# NetSuite Production Configuration
+# ===========================================
+NETSUITE_PRODUCTION_ENABLED=true
+NETSUITE_PRODUCTION_BASE_URL=https://11970733.restlets.api.netsuite.com
+NETSUITE_PRODUCTION_SCRIPT_ID=472
+NETSUITE_PRODUCTION_DEPLOYMENT_ID=1
+NETSUITE_PRODUCTION_CONSUMER_KEY=your_production_consumer_key
+NETSUITE_PRODUCTION_CONSUMER_SECRET=your_production_consumer_secret
+NETSUITE_PRODUCTION_TOKEN=your_production_token
+NETSUITE_PRODUCTION_TOKEN_SECRET=your_production_token_secret
+NETSUITE_PRODUCTION_REALM=11970733
+NETSUITE_PRODUCTION_TIMEOUT=30000
 
 # ===========================================
 # MinIO Configuration (Optional)

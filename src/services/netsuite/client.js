@@ -1,19 +1,23 @@
 const axios = require('axios');
 const { Logger } = require('../../utils/logger');
-const { NETSUITE_CONFIG, validateConfig, getRestletUrl } = require('../../config/netsuite');
+const { getNetSuiteConfig, validateConfig, getRestletUrl } = require('../../config/netsuite');
 const { getOAuthService } = require('./oauth');
 const { metrics } = require('../../config/prometheus');
+const { getCurrentEnvironment } = require('../../utils/environment');
 
 /**
  * NetSuite API Client Service
  * Menangani semua komunikasi dengan NetSuite RESTlet API
+ * Support multiple environments: sandbox dan production
  */
 class NetSuiteClient {
-  constructor(module = 'unknown') {
-    this.baseUrl = NETSUITE_CONFIG.baseUrl;
-    this.restletUrl = getRestletUrl();
-    this.timeout = NETSUITE_CONFIG.timeout;
-    this.oauthService = getOAuthService();
+  constructor(module = 'unknown', env = null) {
+    this.environment = env || getCurrentEnvironment();
+    this.config = getNetSuiteConfig(this.environment);
+    this.baseUrl = this.config.baseUrl;
+    this.restletUrl = getRestletUrl(this.environment);
+    this.timeout = this.config.timeout;
+    this.oauthService = getOAuthService(this.environment);
     this.module = module;
   }
 
@@ -21,14 +25,14 @@ class NetSuiteClient {
    * Make authenticated request ke NetSuite API
    */
   async request(method, params = {}, body = null) {
-    const validation = validateConfig();
+    const validation = validateConfig(this.environment);
     if (!validation.valid) {
-      throw new Error(`NetSuite configuration error: ${validation.error}`);
+      throw new Error(`NetSuite configuration error (${this.environment}): ${validation.error}`);
     }
 
     const oauthValidation = this.oauthService.validateCredentials();
     if (!oauthValidation.valid) {
-      throw new Error(`OAuth credentials error: ${oauthValidation.error}`);
+      throw new Error(`OAuth credentials error (${this.environment}): ${oauthValidation.error}`);
     }
 
     try {
@@ -141,21 +145,30 @@ class NetSuiteClient {
   }
 }
 
-// Singleton instance
-let clientInstance = null;
+// Singleton instances per environment
+const clientInstances = {
+  sandbox: null,
+  production: null,
+};
 
 /**
- * Get NetSuite client instance
- * Singleton pattern - reuse instance untuk efisiensi
+ * Get NetSuite client instance untuk environment tertentu
+ * Singleton pattern per environment - reuse instance untuk efisiensi
+ * @param {string} module - Module name
+ * @param {string} env - Environment name (optional, defaults to current environment)
+ * @returns {NetSuiteClient} NetSuite client instance
  */
-const getNetSuiteClient = (module = 'unknown') => {
-  if (!clientInstance) {
-    clientInstance = new NetSuiteClient(module);
-  } else if (clientInstance.module !== module) {
+const getNetSuiteClient = (module = 'unknown', env = null) => {
+  const environment = env || getCurrentEnvironment();
+  
+  if (!clientInstances[environment]) {
+    clientInstances[environment] = new NetSuiteClient(module, environment);
+  } else if (clientInstances[environment].module !== module) {
     // Update module jika berbeda
-    clientInstance.module = module;
+    clientInstances[environment].module = module;
   }
-  return clientInstance;
+  
+  return clientInstances[environment];
 };
 
 module.exports = {

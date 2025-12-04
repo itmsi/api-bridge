@@ -55,5 +55,41 @@ module.exports = {
     seeds: {
       directory: path.join(__dirname, 'repository/postgres/seeders'),
     }
+  },
+  sandbox: {
+    client: process.env.DB_CLIENT_SANDBOX || 'pg',
+    connection: {
+      host: process.env.DB_HOST_SANDBOX,
+      port: process.env.DB_PORT_SANDBOX,
+      user: process.env.DB_USER_SANDBOX,
+      password: process.env.DB_PASS_SANDBOX,
+      database: process.env.DB_NAME_SANDBOX,
+    },
+    debug: false,
+    migrations: {
+      tableName: 'migrations',
+      directory: path.join(__dirname, 'repository/postgres/migrations'),
+    },
+    seeds: {
+      directory: path.join(__dirname, 'repository/postgres/seeders'),
+    }
+  },
+  netsuite_production: {
+    client: process.env.DB_CLIENT_PRODUCTION || 'pg',
+    connection: {
+      host: process.env.DB_HOST_PRODUCTION,
+      port: process.env.DB_PORT_PRODUCTION,
+      user: process.env.DB_USER_PRODUCTION,
+      password: process.env.DB_PASS_PRODUCTION,
+      database: process.env.DB_NAME_PRODUCTION,
+    },
+    debug: false,
+    migrations: {
+      tableName: 'migrations',
+      directory: path.join(__dirname, 'repository/postgres/migrations'),
+    },
+    seeds: {
+      directory: path.join(__dirname, 'repository/postgres/seeders'),
+    }
   }
 }

@@ -1,14 +1,17 @@
 const { getNetSuiteClient } = require('./client');
 const { Logger } = require('../../utils/logger');
 const { getScriptConfig } = require('../../config/netsuite');
+const { getCurrentEnvironment } = require('../../utils/environment');
 
 /**
  * NetSuite Customer Service
  * Service khusus untuk operasi customer dengan NetSuite API
+ * Support multiple environments: sandbox dan production
  */
 class NetSuiteCustomerService {
-  constructor() {
-    this.client = getNetSuiteClient('customer');
+  constructor(env = null) {
+    this.environment = env || getCurrentEnvironment();
+    this.client = getNetSuiteClient('customer', this.environment);
   }
 
   /**
@@ -20,7 +23,7 @@ class NetSuiteCustomerService {
       Logger.info(`Fetching customer from NetSuite: ${customerId}`);
 
       // Get script config from database (per module, bukan per operation)
-      const scriptConfig = await getScriptConfig('customer');
+      const scriptConfig = await getScriptConfig('customer', null, this.environment);
       const response = await this.client.get({
         customerId,
         operation: 'read',
@@ -75,7 +78,7 @@ class NetSuiteCustomerService {
       };
 
       // Get script config from database (per module, bukan per operation)
-      const scriptConfig = await getScriptConfig('customer');
+      const scriptConfig = await getScriptConfig('customer', null, this.environment);
       const response = await this.client.post(requestBody, {
         script: scriptConfig.script_id,
         deploy: scriptConfig.deployment_id,
@@ -111,7 +114,7 @@ class NetSuiteCustomerService {
       const requestBody = this.transformCustomerToNetSuiteFormat(customerData, 'create');
 
       // Get script config from database (per module, bukan per operation)
-      const scriptConfig = await getScriptConfig('customer');
+      const scriptConfig = await getScriptConfig('customer', null, this.environment);
       const response = await this.client.post(requestBody, {
         operation: 'create',
         script: scriptConfig.script_id,
@@ -140,7 +143,7 @@ class NetSuiteCustomerService {
       const requestBody = this.transformCustomerToNetSuiteFormat(customerData, 'update', internalId);
 
       // Get script config from database (per module, bukan per operation)
-      const scriptConfig = await getScriptConfig('customer');
+      const scriptConfig = await getScriptConfig('customer', null, this.environment);
       const response = await this.client.post(requestBody, {
         operation: 'update',
         script: scriptConfig.script_id,
@@ -430,17 +433,25 @@ class NetSuiteCustomerService {
   }
 }
 
-// Singleton instance
-let customerServiceInstance = null;
+// Singleton instances per environment
+const customerServiceInstances = {
+  sandbox: null,
+  production: null,
+};
 
 /**
- * Get NetSuite customer service instance
+ * Get NetSuite customer service instance untuk environment tertentu
+ * @param {string} env - Environment name (optional, defaults to current environment)
+ * @returns {NetSuiteCustomerService} Customer service instance
  */
-const getNetSuiteCustomerService = () => {
-  if (!customerServiceInstance) {
-    customerServiceInstance = new NetSuiteCustomerService();
+const getNetSuiteCustomerService = (env = null) => {
+  const environment = env || getCurrentEnvironment();
+  
+  if (!customerServiceInstances[environment]) {
+    customerServiceInstances[environment] = new NetSuiteCustomerService(environment);
   }
-  return customerServiceInstance;
+  
+  return customerServiceInstances[environment];
 };
 
 module.exports = {

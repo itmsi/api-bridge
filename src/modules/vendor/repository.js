@@ -1,5 +1,6 @@
 const db = require('../../config/database');
-const { pgCore } = require('../../config/database');
+const { pgCore, getDbForEnvironment } = require('../../config/database');
+const { getCurrentEnvironment } = require('../../utils/environment');
 
 const TABLE_NAME = 'vendors';
 
@@ -155,8 +156,12 @@ const upsert = async (vendorData, trx = null) => {
 const batchUpsert = async (vendors) => {
   const results = [];
   
+  // Get database connection untuk current environment
+  const environment = getCurrentEnvironment();
+  const dbConnection = getDbForEnvironment(environment);
+  
   // Use transaction untuk atomic operation
-  return await pgCore.transaction(async (trx) => {
+  return await dbConnection.transaction(async (trx) => {
     for (const vendor of vendors) {
       const result = await upsert(vendor, trx);
       results.push(result);

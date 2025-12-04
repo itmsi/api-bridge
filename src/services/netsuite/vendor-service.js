@@ -1,14 +1,17 @@
 const { getNetSuiteClient } = require('./client');
 const { Logger } = require('../../utils/logger');
 const { getScriptConfig } = require('../../config/netsuite');
+const { getCurrentEnvironment } = require('../../utils/environment');
 
 /**
  * NetSuite Vendor Service
  * Service khusus untuk operasi vendor dengan NetSuite API
+ * Support multiple environments: sandbox dan production
  */
 class NetSuiteVendorService {
-  constructor() {
-    this.client = getNetSuiteClient('vendor');
+  constructor(env = null) {
+    this.environment = env || getCurrentEnvironment();
+    this.client = getNetSuiteClient('vendor', this.environment);
   }
 
   /**
@@ -19,7 +22,7 @@ class NetSuiteVendorService {
       Logger.info(`Fetching vendor from NetSuite: ${vendorId}`);
 
       // Get script config from database (per module, bukan per operation)
-      const scriptConfig = await getScriptConfig('vendor');
+      const scriptConfig = await getScriptConfig('vendor', null, this.environment);
       const response = await this.client.get({
         vendorId,
         operation: 'read',
@@ -72,7 +75,7 @@ class NetSuiteVendorService {
       };
 
       // Get script config from database (per module, bukan per operation)
-      const scriptConfig = await getScriptConfig('vendor');
+      const scriptConfig = await getScriptConfig('vendor', null, this.environment);
       const response = await this.client.post(requestBody, {
         script: scriptConfig.script_id,
         deploy: scriptConfig.deployment_id,
@@ -257,17 +260,25 @@ class NetSuiteVendorService {
   }
 }
 
-// Singleton instance
-let vendorServiceInstance = null;
+// Singleton instances per environment
+const vendorServiceInstances = {
+  sandbox: null,
+  production: null,
+};
 
 /**
- * Get NetSuite vendor service instance
+ * Get NetSuite vendor service instance untuk environment tertentu
+ * @param {string} env - Environment name (optional, defaults to current environment)
+ * @returns {NetSuiteVendorService} Vendor service instance
  */
-const getNetSuiteVendorService = () => {
-  if (!vendorServiceInstance) {
-    vendorServiceInstance = new NetSuiteVendorService();
+const getNetSuiteVendorService = (env = null) => {
+  const environment = env || getCurrentEnvironment();
+  
+  if (!vendorServiceInstances[environment]) {
+    vendorServiceInstances[environment] = new NetSuiteVendorService(environment);
   }
-  return vendorServiceInstance;
+  
+  return vendorServiceInstances[environment];
 };
 
 module.exports = {

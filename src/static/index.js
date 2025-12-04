@@ -57,8 +57,8 @@ const paths = {
   ...customerPaths,
   ...vendorPaths,
   // ...syncPaths,
-  // ...apiClientPaths,
-  // ...netsuiteScriptsPaths,
+  ...apiClientPaths,
+  ...netsuiteScriptsPaths,
 };
 
 const index = {

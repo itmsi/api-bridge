@@ -1,9 +1,13 @@
 /**
  * Server Entry Point
  * Handles process events and starts the Express application
+ * Support multiple environments: sandbox dan production pada port berbeda
  */
-const app = require('./app')
-const { pgCore } = require('./config/database')
+// Load environment variables FIRST before requiring other modules
+require('dotenv').config()
+
+const { getPortForEnvironment, getCurrentEnvironment, SANDBOX_PORT, PRODUCTION_PORT } = require('./utils/environment')
+const { pgCore, getDbForEnvironment } = require('./config/database')
 const { connectRedis, isRedisReady, REDIS_ENABLED } = require('./config/redis')
 const { connectRabbitMQ } = require('./config/rabbitmq')
 const knexfile = require('./knexfile')
@@ -40,25 +44,39 @@ process.on('SIGTERM', () => {
 })
 
 /**
- * Test database connection
+ * Test database connection untuk environment tertentu
  */
-const testDatabaseConnection = async () => {
+const testDatabaseConnection = async (env = null) => {
   try {
-    const env = process.env.NODE_ENV || 'development'
-    const config = knexfile[env]
-    const dbInfo = config.connection
+    const environment = env || getCurrentEnvironment()
+    const db = getDbForEnvironment(environment)
     
-    await pgCore.raw('SELECT 1')
+    await db.raw('SELECT 1')
     
-    console.log('✅ Database Connection: CONNECTED')
+    // Get connection info
+    let dbInfo = {}
+    if (environment === 'sandbox') {
+      const config = knexfile.sandbox
+      dbInfo = config.connection
+    } else if (environment === 'production') {
+      const config = knexfile.netsuite_production
+      dbInfo = config.connection
+    } else {
+      const envName = process.env.NODE_ENV || 'development'
+      const config = knexfile[envName]
+      dbInfo = config.connection
+    }
+    
+    console.log(`✅ Database Connection (${environment}): CONNECTED`)
     console.log(`   Host: ${dbInfo.host}:${dbInfo.port}`)
     console.log(`   Database: ${dbInfo.database}`)
     console.log(`   User: ${dbInfo.user}`)
-    return { connected: true, info: dbInfo }
+    return { connected: true, info: dbInfo, environment }
   } catch (error) {
-    console.log('❌ Database Connection: FAILED')
+    const environment = env || getCurrentEnvironment()
+    console.log(`❌ Database Connection (${environment}): FAILED`)
     console.log(`   Error: ${error.message}`)
-    return { connected: false, error: error.message }
+    return { connected: false, error: error.message, environment }
   }
 }
 
@@ -231,13 +249,14 @@ const testRabbitMQConnection = async () => {
 }
 
 /**
- * Test all connections and log status
+ * Test all connections and log status untuk environment tertentu
  */
-const testAllConnections = async () => {
-  console.log('\n🔍 Testing Connections...\n')
+const testAllConnections = async (env = null) => {
+  const environment = env || getCurrentEnvironment()
+  console.log(`\n🔍 Testing Connections (${environment})...\n`)
   console.log('='.repeat(50))
   
-  const dbStatus = await testDatabaseConnection()
+  const dbStatus = await testDatabaseConnection(environment)
   console.log('')
   
   // Wait a bit for Redis initialization from app.js to complete
@@ -252,27 +271,121 @@ const testAllConnections = async () => {
   console.log('='.repeat(50))
   console.log('')
   
-  return { dbStatus, redisStatus, rabbitmqStatus }
+  return { dbStatus, redisStatus, rabbitmqStatus, environment }
 }
 
-const PORT = process.env.APP_PORT || 9575;
-const APP_NAME = process.env.APP_NAME || 'API Bridge';
+/**
+ * Create and start server untuk environment tertentu
+ */
+const startServer = async (env) => {
+  // Set environment variable untuk app instance
+  process.env.APP_ENVIRONMENT = env
+  process.env.APP_PORT = getPortForEnvironment(env)
+  
+  // Clear module cache untuk app.js agar setiap environment menggunakan instance yang berbeda
+  // Ini penting karena require() di-cache oleh Node.js
+  const appPath = require.resolve('./app')
+  if (require.cache[appPath]) {
+    delete require.cache[appPath]
+  }
+  
+  // Import app setelah environment variable di-set dan cache di-clear
+  // Note: app.js akan menggunakan environment dari process.env
+  const app = require('./app')
+  
+  const PORT = getPortForEnvironment(env)
+  const APP_NAME = process.env.APP_NAME || 'API Bridge'
+  
+  // Test connections sebelum starting server
+  await testAllConnections(env)
+  
+  return new Promise((resolve, reject) => {
+    const server = app.listen(PORT, () => {
+      console.log('')
+      console.log(`🚀 Server Started Successfully (${env})!`)
+      console.log('='.repeat(50))
+      console.log(`📡 Server running on: http://localhost:${PORT}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📚 API Documentation: http://localhost:${PORT}/documentation`);
+      }
+      console.log(`🌍 Environment: ${env}`)
+      console.log(`🔧 NetSuite: ${env === 'sandbox' ? 'Sandbox' : 'Production'}`)
+      console.log('='.repeat(50))
+      console.log('')
+      resolve(server)
+    })
+    
+    server.on('error', (error) => {
+      console.error(`❌ Failed to start server (${env}):`, error)
+      reject(error)
+    })
+  })
+}
 
-// Test connections before starting server
-testAllConnections().then(() => {
-  app.listen(PORT, () => {
-    console.log('')
-    console.log('🚀 Server Started Successfully!')
-    console.log('='.repeat(50))
-    console.log(`📡 Server running on: http://localhost:${PORT}`)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`📚 API Documentation: http://localhost:${PORT}/documentation`);
+/**
+ * Main entry point
+ * Start servers untuk sandbox dan production
+ */
+const main = async () => {
+  const SANDBOX_ENABLED = process.env.NETSUITE_SANDBOX_ENABLED !== 'false'
+  const PRODUCTION_ENABLED = process.env.NETSUITE_PRODUCTION_ENABLED !== 'false'
+  
+  const servers = []
+  
+  try {
+    // Start Sandbox server
+    if (SANDBOX_ENABLED) {
+      console.log('\n🔄 Starting Sandbox Server...\n')
+      const sandboxServer = await startServer('sandbox')
+      servers.push({ env: 'sandbox', server: sandboxServer, port: SANDBOX_PORT })
     }
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+    
+    // Start Production server
+    if (PRODUCTION_ENABLED) {
+      console.log('\n🔄 Starting Production Server...\n')
+      const productionServer = await startServer('production')
+      servers.push({ env: 'production', server: productionServer, port: PRODUCTION_PORT })
+    }
+    
+    if (servers.length === 0) {
+      console.error('❌ No servers enabled. Please enable at least one environment.')
+      process.exit(1)
+    }
+    
+    console.log('\n✅ All servers started successfully!')
+    console.log('='.repeat(50))
+    servers.forEach(({ env, port }) => {
+      console.log(`   ${env.toUpperCase()}: http://localhost:${port}`)
+    })
     console.log('='.repeat(50))
     console.log('')
-  });
-}).catch((error) => {
-  console.error('❌ Failed to test connections:', error)
-  process.exit(1)
-});
+    
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('\n⚠️  SIGTERM received, shutting down servers...')
+      servers.forEach(({ env, server }) => {
+        server.close(() => {
+          console.log(`✅ Server (${env}) closed`)
+        })
+      })
+      process.exit(0)
+    })
+    
+    process.on('SIGINT', () => {
+      console.log('\n⚠️  SIGINT received, shutting down servers...')
+      servers.forEach(({ env, server }) => {
+        server.close(() => {
+          console.log(`✅ Server (${env}) closed`)
+        })
+      })
+      process.exit(0)
+    })
+    
+  } catch (error) {
+    console.error('❌ Failed to start servers:', error)
+    process.exit(1)
+  }
+}
+
+// Start servers
+main()
