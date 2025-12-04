@@ -13,6 +13,7 @@ environment.*
 !environment.example
 !environment.server
 !src/utils/environment.js
+!src/middlewares/environment.js
 
 # Logs
 logs/*
