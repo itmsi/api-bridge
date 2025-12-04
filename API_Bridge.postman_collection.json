@@ -1,0 +1,1994 @@
+{
+	"info": {
+		"_postman_id": "api-bridge-collection",
+		"name": "API Bridge",
+		"description": "API Bridge - Sistem integrasi dengan Oracle NetSuite untuk sinkronisasi data customer dengan fitur on-demand incremental sync (Last Updated Sync), caching, dan background workers.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "api-bridge"
+	},
+	"item": [
+		{
+			"name": "Sandbox",
+			"description": "Environment Sandbox - Port 3000",
+			"item": [
+				{
+					"name": "OAuth2 Authentication",
+					"item": [
+						{
+							"name": "Get OAuth2 Access Token (POST)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"grant_type\": \"client_credentials\",\n  \"client_id\": \"apikey_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\",\n  \"client_secret\": \"abc123def456ghi789jkl012mno345pqr678stu901vwx234yz\"\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/auth/token",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["auth", "token"]
+								},
+								"description": "Endpoint untuk mendapatkan access token dan refresh token menggunakan OAuth2. Mendukung grant type: client_credentials (dengan client_key dan client_secret) dan refresh_token (dengan refresh_token yang sudah ada)."
+							},
+							"response": []
+						},
+						{
+							"name": "Get OAuth2 Access Token (GET)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Basic {{basic_auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/auth/token?grant_type=client_credentials&client_id=apikey_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6&client_secret=abc123def456ghi789jkl012mno345pqr678stu901vwx234yz",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["auth", "token"],
+									"query": [
+										{
+											"key": "grant_type",
+											"value": "client_credentials"
+										},
+										{
+											"key": "client_id",
+											"value": "apikey_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+										},
+										{
+											"key": "client_secret",
+											"value": "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz"
+										}
+									]
+								},
+								"description": "Alternatif endpoint untuk mendapatkan access token menggunakan query parameters. Juga mendukung Basic Authentication header."
+							},
+							"response": []
+						},
+						{
+							"name": "Revoke Refresh Token",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refresh_token\": \"abc123def456ghi789jkl012mno345pqr678stu901vwx234yz\"\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/auth/revoke",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["auth", "revoke"]
+								},
+								"description": "Revoke refresh token agar tidak bisa digunakan lagi untuk mendapatkan access token baru."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Customers",
+					"item": [
+						{
+							"name": "Get All Customers",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{sandbox_access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"pageSize\": 50,\n  \"pageIndex\": 0,\n  \"lastmodified\": \"2025-11-21T10:00:00+07:00\",\n  \"netsuite_id\": null\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/customers/get",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["customers", "get"]
+								},
+								"description": "Retrieve all customers with pagination, filtering, and on-demand incremental sync. Format request: { pageSize, pageIndex, lastmodified, netsuite_id }. Format response: { success, pageIndex, pageSize, totalRows, totalPages, items }."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Vendors",
+					"item": [
+						{
+							"name": "Get All Vendors",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{sandbox_access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"pageSize\": 50,\n  \"pageIndex\": 0,\n  \"lastmodified\": \"2025-11-21T10:00:00+07:00\",\n  \"netsuite_id\": null\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/vendors/get",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["vendors", "get"]
+								},
+								"description": "Retrieve all vendors with pagination, filtering, and on-demand incremental sync. Format request: { pageSize, pageIndex, lastmodified, netsuite_id }. Format response: { success, pageIndex, pageSize, totalRows, totalPages, items }."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Sync (Admin)",
+					"item": [
+						{
+							"name": "Trigger Manual Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"module\": \"customer\"\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/sync",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "sync"]
+								},
+								"description": "Manually trigger a sync job for a specific module"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Sync Job Status",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/sync/job/:jobId",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "sync", "job", ":jobId"],
+									"variable": [
+										{
+											"key": "jobId",
+											"value": "",
+											"description": "Sync job UUID"
+										}
+									]
+								},
+								"description": "Retrieve the status of a sync job by job ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Sync Tracker Status",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/sync/status/:module",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "sync", "status", ":module"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name (e.g., customer)"
+										}
+									]
+								},
+								"description": "Retrieve sync tracker status for a specific module"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Failed Jobs",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/sync/failed?module=customer&page=1&limit=50",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "sync", "failed"],
+									"query": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Filter by module"
+										},
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "limit",
+											"value": "50",
+											"description": "Items per page"
+										}
+									]
+								},
+								"description": "Retrieve list of failed sync jobs"
+							},
+							"response": []
+						},
+						{
+							"name": "Retry Failed Job",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/sync/failed/:jobId/retry",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "sync", "failed", ":jobId", "retry"],
+									"variable": [
+										{
+											"key": "jobId",
+											"value": "",
+											"description": "Failed job UUID"
+										}
+									]
+								},
+								"description": "Retry a failed sync job by creating a new job with the same parameters"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "API Clients (Admin)",
+					"item": [
+						{
+							"name": "Get All API Clients",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/api-clients?page=1&limit=50",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "api-clients"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "limit",
+											"value": "50",
+											"description": "Items per page"
+										}
+									]
+								},
+								"description": "Retrieve all registered API clients with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "Register New API Client",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Internal API - Order Service\",\n  \"description\": \"API untuk order service internal\",\n  \"api_url\": \"https://api.internal.com/order-service\",\n  \"ip_whitelist\": [\"192.168.1.1\", \"10.0.0.1\"],\n  \"rate_limit_per_minute\": 100,\n  \"rate_limit_per_hour\": 1000,\n  \"notes\": \"Production API\"\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/api-clients",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "api-clients"]
+								},
+								"description": "Register new API client untuk mendapatkan client_key dan client_secret. URL API yang didaftarkan akan bisa mengakses API Bridge dengan credentials tersebut."
+							},
+							"response": []
+						},
+						{
+							"name": "Get API Client by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/api-clients/:id",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "api-clients", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Retrieve API client details by ID (client_secret tidak ditampilkan untuk security)"
+							},
+							"response": []
+						},
+						{
+							"name": "Update API Client",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated API Client Name\",\n  \"description\": \"Updated description\",\n  \"api_url\": \"https://api.updated.com\",\n  \"ip_whitelist\": [\"192.168.1.1\"],\n  \"rate_limit_per_minute\": 200,\n  \"rate_limit_per_hour\": 2000,\n  \"notes\": \"Updated notes\"\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/api-clients/:id",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "api-clients", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Update API client information (cannot change client_key, use regenerate-secret for secret)"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete API Client",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/api-clients/:id",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "api-clients", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Delete API client (permanent deletion)"
+							},
+							"response": []
+						},
+						{
+							"name": "Regenerate Client Secret",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/api-clients/:id/regenerate-secret",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "api-clients", ":id", "regenerate-secret"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Generate new client_secret untuk API client. Secret lama akan tidak berlaku lagi."
+							},
+							"response": []
+						},
+						{
+							"name": "Toggle Active Status",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/api-clients/:id/toggle-status",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "api-clients", ":id", "toggle-status"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Aktifkan atau nonaktifkan API client"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "NetSuite Scripts (Admin)",
+					"item": [
+						{
+							"name": "Get All NetSuite Script Configurations",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/netsuite-scripts?page=1&limit=50&module=customer&operation=getPage&is_active=true",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "netsuite-scripts"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "limit",
+											"value": "50",
+											"description": "Items per page"
+										},
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Filter by module name"
+										},
+										{
+											"key": "operation",
+											"value": "getPage",
+											"description": "Filter by operation name"
+										},
+										{
+											"key": "is_active",
+											"value": "true",
+											"description": "Filter by active status"
+										}
+									]
+								},
+								"description": "Retrieve all NetSuite script configurations dengan pagination. Script configurations menentukan script ID dan deployment ID yang digunakan untuk setiap module dan operation."
+							},
+							"response": []
+						},
+						{
+							"name": "Create or Update NetSuite Script Configuration",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"module\": \"customer\",\n  \"operation\": \"getPage\",\n  \"script_id\": \"532\",\n  \"deployment_id\": \"1\",\n  \"description\": \"Get Customer Page - Get paginated customer list from NetSuite\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/netsuite-scripts",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "netsuite-scripts"]
+								},
+								"description": "Create atau update NetSuite script configuration. Jika sudah ada dengan module dan operation yang sama, akan di-update. Jika belum ada, akan di-create."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Script Configurations by Module",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/netsuite-scripts/module/:module",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "netsuite-scripts", "module", ":module"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name (e.g., customer)"
+										}
+									]
+								},
+								"description": "Retrieve all script configurations untuk module tertentu"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Script Configuration by Module and Operation",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/netsuite-scripts/:module/:operation",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "netsuite-scripts", ":module", ":operation"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name"
+										},
+										{
+											"key": "operation",
+											"value": "getPage",
+											"description": "Operation name"
+										}
+									]
+								},
+								"description": "Retrieve script configuration untuk module dan operation tertentu"
+							},
+							"response": []
+						},
+						{
+							"name": "Update NetSuite Script Configuration",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"script_id\": \"532\",\n  \"deployment_id\": \"1\",\n  \"description\": \"Get Customer Page - Get paginated customer list from NetSuite\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/netsuite-scripts/:module/:operation",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "netsuite-scripts", ":module", ":operation"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name"
+										},
+										{
+											"key": "operation",
+											"value": "getPage",
+											"description": "Operation name"
+										}
+									]
+								},
+								"description": "Update NetSuite script configuration untuk module dan operation tertentu"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete NetSuite Script Configuration",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{sandbox_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{sandbox_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{sandbox_base_url}}/admin/netsuite-scripts/:module/:operation",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["admin", "netsuite-scripts", ":module", ":operation"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name"
+										},
+										{
+											"key": "operation",
+											"value": "getPage",
+											"description": "Operation name"
+										}
+									]
+								},
+								"description": "Soft delete NetSuite script configuration (set is_active = false) untuk module dan operation tertentu"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Examples",
+					"item": [
+						{
+							"name": "Get All Examples",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{sandbox_base_url}}/examples?page=1&limit=10",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["examples"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Items per page"
+										}
+									]
+								},
+								"description": "Retrieve all examples with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "Create New Example",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Example Name\",\n  \"description\": \"Example Description\"\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/examples",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["examples"]
+								},
+								"description": "Create a new example item"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Example by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{sandbox_base_url}}/examples/:id",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["examples", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Example UUID"
+										}
+									]
+								},
+								"description": "Retrieve a single example by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Example",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Example Name\",\n  \"description\": \"Updated Description\"\n}"
+								},
+								"url": {
+									"raw": "{{sandbox_base_url}}/examples/:id",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["examples", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Example UUID"
+										}
+									]
+								},
+								"description": "Update an existing example"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Example",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{sandbox_base_url}}/examples/:id",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["examples", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Example UUID"
+										}
+									]
+								},
+								"description": "Soft delete an example (sets deleted_at timestamp)"
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Deleted Example",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{sandbox_base_url}}/examples/:id/restore",
+									"host": ["{{sandbox_base_url}}"],
+									"path": ["examples", ":id", "restore"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Example UUID"
+										}
+									]
+								},
+								"description": "Restore a soft-deleted example"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Production",
+			"description": "Environment Production - Port 3001",
+			"item": [
+				{
+					"name": "OAuth2 Authentication",
+					"item": [
+						{
+							"name": "Get OAuth2 Access Token (POST)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"grant_type\": \"client_credentials\",\n  \"client_id\": \"apikey_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\",\n  \"client_secret\": \"abc123def456ghi789jkl012mno345pqr678stu901vwx234yz\"\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/auth/token",
+									"host": ["{{production_base_url}}"],
+									"path": ["auth", "token"]
+								},
+								"description": "Endpoint untuk mendapatkan access token dan refresh token menggunakan OAuth2. Mendukung grant type: client_credentials (dengan client_key dan client_secret) dan refresh_token (dengan refresh_token yang sudah ada)."
+							},
+							"response": []
+						},
+						{
+							"name": "Get OAuth2 Access Token (GET)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Basic {{basic_auth_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/auth/token?grant_type=client_credentials&client_id=apikey_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6&client_secret=abc123def456ghi789jkl012mno345pqr678stu901vwx234yz",
+									"host": ["{{production_base_url}}"],
+									"path": ["auth", "token"],
+									"query": [
+										{
+											"key": "grant_type",
+											"value": "client_credentials"
+										},
+										{
+											"key": "client_id",
+											"value": "apikey_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+										},
+										{
+											"key": "client_secret",
+											"value": "abc123def456ghi789jkl012mno345pqr678stu901vwx234yz"
+										}
+									]
+								},
+								"description": "Alternatif endpoint untuk mendapatkan access token menggunakan query parameters. Juga mendukung Basic Authentication header."
+							},
+							"response": []
+						},
+						{
+							"name": "Revoke Refresh Token",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refresh_token\": \"abc123def456ghi789jkl012mno345pqr678stu901vwx234yz\"\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/auth/revoke",
+									"host": ["{{production_base_url}}"],
+									"path": ["auth", "revoke"]
+								},
+								"description": "Revoke refresh token agar tidak bisa digunakan lagi untuk mendapatkan access token baru."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Customers",
+					"item": [
+						{
+							"name": "Get All Customers",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{production_access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"pageSize\": 50,\n  \"pageIndex\": 0,\n  \"lastmodified\": \"2025-11-21T10:00:00+07:00\",\n  \"netsuite_id\": null\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/customers/get",
+									"host": ["{{production_base_url}}"],
+									"path": ["customers", "get"]
+								},
+								"description": "Retrieve all customers with pagination, filtering, and on-demand incremental sync. Format request: { pageSize, pageIndex, lastmodified, netsuite_id }. Format response: { success, pageIndex, pageSize, totalRows, totalPages, items }."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Vendors",
+					"item": [
+						{
+							"name": "Get All Vendors",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{production_access_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"pageSize\": 50,\n  \"pageIndex\": 0,\n  \"lastmodified\": \"2025-11-21T10:00:00+07:00\",\n  \"netsuite_id\": null\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/vendors/get",
+									"host": ["{{production_base_url}}"],
+									"path": ["vendors", "get"]
+								},
+								"description": "Retrieve all vendors with pagination, filtering, and on-demand incremental sync. Format request: { pageSize, pageIndex, lastmodified, netsuite_id }. Format response: { success, pageIndex, pageSize, totalRows, totalPages, items }."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Sync (Admin)",
+					"item": [
+						{
+							"name": "Trigger Manual Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"module\": \"customer\"\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/admin/sync",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "sync"]
+								},
+								"description": "Manually trigger a sync job for a specific module"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Sync Job Status",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/sync/job/:jobId",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "sync", "job", ":jobId"],
+									"variable": [
+										{
+											"key": "jobId",
+											"value": "",
+											"description": "Sync job UUID"
+										}
+									]
+								},
+								"description": "Retrieve the status of a sync job by job ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Sync Tracker Status",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/sync/status/:module",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "sync", "status", ":module"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name (e.g., customer)"
+										}
+									]
+								},
+								"description": "Retrieve sync tracker status for a specific module"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Failed Jobs",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/sync/failed?module=customer&page=1&limit=50",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "sync", "failed"],
+									"query": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Filter by module"
+										},
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "limit",
+											"value": "50",
+											"description": "Items per page"
+										}
+									]
+								},
+								"description": "Retrieve list of failed sync jobs"
+							},
+							"response": []
+						},
+						{
+							"name": "Retry Failed Job",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/sync/failed/:jobId/retry",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "sync", "failed", ":jobId", "retry"],
+									"variable": [{
+										"key": "jobId",
+										"value": "",
+										"description": "Failed job UUID"
+									}]
+								},
+								"description": "Retry a failed sync job by creating a new job with the same parameters"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "API Clients (Admin)",
+					"item": [
+						{
+							"name": "Get All API Clients",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/api-clients?page=1&limit=50",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "api-clients"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "limit",
+											"value": "50",
+											"description": "Items per page"
+										}
+									]
+								},
+								"description": "Retrieve all registered API clients with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "Register New API Client",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Internal API - Order Service\",\n  \"description\": \"API untuk order service internal\",\n  \"api_url\": \"https://api.internal.com/order-service\",\n  \"ip_whitelist\": [\"192.168.1.1\", \"10.0.0.1\"],\n  \"rate_limit_per_minute\": 100,\n  \"rate_limit_per_hour\": 1000,\n  \"notes\": \"Production API\"\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/admin/api-clients",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "api-clients"]
+								},
+								"description": "Register new API client untuk mendapatkan client_key dan client_secret. URL API yang didaftarkan akan bisa mengakses API Bridge dengan credentials tersebut."
+							},
+							"response": []
+						},
+						{
+							"name": "Get API Client by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/api-clients/:id",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "api-clients", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Retrieve API client details by ID (client_secret tidak ditampilkan untuk security)"
+							},
+							"response": []
+						},
+						{
+							"name": "Update API Client",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated API Client Name\",\n  \"description\": \"Updated description\",\n  \"api_url\": \"https://api.updated.com\",\n  \"ip_whitelist\": [\"192.168.1.1\"],\n  \"rate_limit_per_minute\": 200,\n  \"rate_limit_per_hour\": 2000,\n  \"notes\": \"Updated notes\"\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/admin/api-clients/:id",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "api-clients", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Update API client information (cannot change client_key, use regenerate-secret for secret)"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete API Client",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/api-clients/:id",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "api-clients", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Delete API client (permanent deletion)"
+							},
+							"response": []
+						},
+						{
+							"name": "Regenerate Client Secret",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/api-clients/:id/regenerate-secret",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "api-clients", ":id", "regenerate-secret"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Generate new client_secret untuk API client. Secret lama akan tidak berlaku lagi."
+							},
+							"response": []
+						},
+						{
+							"name": "Toggle Active Status",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/api-clients/:id/toggle-status",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "api-clients", ":id", "toggle-status"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "API Client ID"
+										}
+									]
+								},
+								"description": "Aktifkan atau nonaktifkan API client"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "NetSuite Scripts (Admin)",
+					"item": [
+						{
+							"name": "Get All NetSuite Script Configurations",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/netsuite-scripts?page=1&limit=50&module=customer&operation=getPage&is_active=true",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "netsuite-scripts"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "limit",
+											"value": "50",
+											"description": "Items per page"
+										},
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Filter by module name"
+										},
+										{
+											"key": "operation",
+											"value": "getPage",
+											"description": "Filter by operation name"
+										},
+										{
+											"key": "is_active",
+											"value": "true",
+											"description": "Filter by active status"
+										}
+									]
+								},
+								"description": "Retrieve all NetSuite script configurations dengan pagination. Script configurations menentukan script ID dan deployment ID yang digunakan untuk setiap module dan operation."
+							},
+							"response": []
+						},
+						{
+							"name": "Create or Update NetSuite Script Configuration",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"module\": \"customer\",\n  \"operation\": \"getPage\",\n  \"script_id\": \"532\",\n  \"deployment_id\": \"1\",\n  \"description\": \"Get Customer Page - Get paginated customer list from NetSuite\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/admin/netsuite-scripts",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "netsuite-scripts"]
+								},
+								"description": "Create atau update NetSuite script configuration. Jika sudah ada dengan module dan operation yang sama, akan di-update. Jika belum ada, akan di-create."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Script Configurations by Module",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/netsuite-scripts/module/:module",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "netsuite-scripts", "module", ":module"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name (e.g., customer)"
+										}
+									]
+								},
+								"description": "Retrieve all script configurations untuk module tertentu"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Script Configuration by Module and Operation",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/netsuite-scripts/:module/:operation",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "netsuite-scripts", ":module", ":operation"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name"
+										},
+										{
+											"key": "operation",
+											"value": "getPage",
+											"description": "Operation name"
+										}
+									]
+								},
+								"description": "Retrieve script configuration untuk module dan operation tertentu"
+							},
+							"response": []
+						},
+						{
+							"name": "Update NetSuite Script Configuration",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"script_id\": \"532\",\n  \"deployment_id\": \"1\",\n  \"description\": \"Get Customer Page - Get paginated customer list from NetSuite\",\n  \"is_active\": true\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/admin/netsuite-scripts/:module/:operation",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "netsuite-scripts", ":module", ":operation"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name"
+										},
+										{
+											"key": "operation",
+											"value": "getPage",
+											"description": "Operation name"
+										}
+									]
+								},
+								"description": "Update NetSuite script configuration untuk module dan operation tertentu"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete NetSuite Script Configuration",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Client-Key",
+										"value": "{{production_client_key}}",
+										"type": "text"
+									},
+									{
+										"key": "X-Client-Secret",
+										"value": "{{production_client_secret}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{production_base_url}}/admin/netsuite-scripts/:module/:operation",
+									"host": ["{{production_base_url}}"],
+									"path": ["admin", "netsuite-scripts", ":module", ":operation"],
+									"variable": [
+										{
+											"key": "module",
+											"value": "customer",
+											"description": "Module name"
+										},
+										{
+											"key": "operation",
+											"value": "getPage",
+											"description": "Operation name"
+										}
+									]
+								},
+								"description": "Soft delete NetSuite script configuration (set is_active = false) untuk module dan operation tertentu"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Examples",
+					"item": [
+						{
+							"name": "Get All Examples",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{production_base_url}}/examples?page=1&limit=10",
+									"host": ["{{production_base_url}}"],
+									"path": ["examples"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Page number"
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Items per page"
+										}
+									]
+								},
+								"description": "Retrieve all examples with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "Create New Example",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Example Name\",\n  \"description\": \"Example Description\"\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/examples",
+									"host": ["{{production_base_url}}"],
+									"path": ["examples"]
+								},
+								"description": "Create a new example item"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Example by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{production_base_url}}/examples/:id",
+									"host": ["{{production_base_url}}"],
+									"path": ["examples", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Example UUID"
+										}
+									]
+								},
+								"description": "Retrieve a single example by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Example",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Example Name\",\n  \"description\": \"Updated Description\"\n}"
+								},
+								"url": {
+									"raw": "{{production_base_url}}/examples/:id",
+									"host": ["{{production_base_url}}"],
+									"path": ["examples", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Example UUID"
+										}
+									]
+								},
+								"description": "Update an existing example"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Example",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{production_base_url}}/examples/:id",
+									"host": ["{{production_base_url}}"],
+									"path": ["examples", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Example UUID"
+										}
+									]
+								},
+								"description": "Soft delete an example (sets deleted_at timestamp)"
+							},
+							"response": []
+						},
+						{
+							"name": "Restore Deleted Example",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{production_base_url}}/examples/:id/restore",
+									"host": ["{{production_base_url}}"],
+									"path": ["examples", ":id", "restore"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Example UUID"
+										}
+									]
+								},
+								"description": "Restore a soft-deleted example"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "sandbox_base_url",
+			"value": "http://localhost:3000/api/v1/bridge",
+			"type": "string"
+		},
+		{
+			"key": "production_base_url",
+			"value": "https://services.motorsights.com/api/v1/bridge",
+			"type": "string"
+		},
+		{
+			"key": "sandbox_access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "production_access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "sandbox_client_key",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "sandbox_client_secret",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "production_client_key",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "production_client_secret",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "basic_auth_token",
+			"value": "",
+			"type": "string",
+			"description": "Base64 encoded client_id:client_secret"
+		}
+	]
+}
+
